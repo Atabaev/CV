@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma'ruza (M1–M23, B1) — Kompyuterli Ko'rish (KOK1506)</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+  <div id="site-header"></div>
+  <main id="topic-root"></main>
+  <div id="site-footer"></div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/data-topics-1.js"></script>
+  <script src="js/data-topics-2.js"></script>
+  <script src="js/data-topics-3.js"></script>
+  <script src="js/data-topics-4.js"></script>
+  <script src="js/data-topics-5.js"></script>
+  <script src="js/data-labs.js"></script>
+  <script src="js/slide-widgets.js"></script>
+  <script src="js/quiz-engine.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    CV_APP.renderChrome('home');
+    CV_PAGE.initTopicPage();
+    window.addEventListener('load', () => {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true }
+          ],
+          throwOnError: false
+        });
+      }
+    });
+  </script>
+</body>
+</html>
