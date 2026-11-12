@@ -77,6 +77,27 @@
       `VARIANT_PARAMS = ${paramJson}\n\n` +
       (lab.pythonCode || lab.code_py || lab.code || '');
 
+    const stepCells = [];
+    (lab.guidedSteps || []).forEach((st, idx) => {
+      const sTitle = (st.title && (st.title[l] || st.title.uz)) || `Step ${idx + 1}`;
+      const sDesc = (st.desc && (st.desc[l] || st.desc.uz)) || '';
+      const sExp = (st.expected && (st.expected[l] || st.expected.uz)) || '';
+      stepCells.push({
+        cell_type: 'markdown',
+        metadata: {},
+        source: [`### ${sTitle}\n`, `${sDesc}\n`, sExp ? `\n**Expected:** ${sExp}` : '']
+      });
+      if (st.code) {
+        stepCells.push({
+          cell_type: 'code',
+          execution_count: null,
+          metadata: {},
+          outputs: [],
+          source: st.code.split('\n').map((line, i, arr) => (i < arr.length - 1 ? line + '\n' : line))
+        });
+      }
+    });
+
     const nb = {
       nbformat: 4,
       nbformat_minor: 5,
@@ -86,6 +107,12 @@
       },
       cells: [
         { cell_type: 'markdown', metadata: {}, source: mdLines },
+        ...stepCells,
+        {
+          cell_type: 'markdown',
+          metadata: {},
+          source: [`## Student Variant #${v} Starter Template\n`, taskLines]
+        },
         {
           cell_type: 'code',
           execution_count: null,
@@ -397,6 +424,15 @@
                   <button type="button" id="print-topic-btn" class="btn btn-secondary btn-sm">🖨️ Print / PDF</button>
                 </div>
 
+                <div class="ref-box" style="margin-bottom:1rem;background:var(--accent-soft);border-color:var(--border-accent);">
+                  <strong>⏱ ${l === 'uz' ? "80-daqiqalik ma'ruza dars rejasi (1 juftlik):" : "80-Minute Lecture Pacing Guide (1 Session):"}</strong>
+                  <div class="muted" style="font-size:0.84rem;margin-top:0.25rem;">
+                    ${l === 'uz'
+                      ? "0–5' Kirish va muammo · 5–32' Chuqur nazariya & KaTeX · 32–48' Doskada sonli misol · 48–62' Kod tahlili & Interaktiv simulyator · 62–72' Keys-muhokama · 72–80' 3× Nazorat testi & Uyga vazifa"
+                      : "0–5' Motivation & Goal · 5–32' Core Theory & Math · 32–48' Whiteboard Numerical Example · 48–62' Python Code & Interactive Widget · 62–72' Case Study Discussion · 72–80' 3× Checkpoint Quiz"}
+                  </div>
+                </div>
+
                 ${(tp.refs && tp.refs.length) ? `
                   <div class="ref-box">
                     <strong>${l === 'uz' ? 'Manbalar va kurs materiallari:' : 'References & Curated Repo Links:'}</strong>
@@ -410,6 +446,11 @@
                     <h2>${escHtml((sec.heading && (sec.heading[l] || sec.heading.uz)) || '')}</h2>
                     <div>${(sec.bodyHtml && (sec.bodyHtml[l] || sec.bodyHtml.uz)) || ''}</div>
                     ${sec.latex ? `<div class="formula-box">$$${sec.latex}$$</div>` : ''}
+                    ${sec.code ? `
+                      <div class="code-wrap">
+                        <div class="code-header"><span>Python / OpenCV / PyTorch Example</span></div>
+                        <pre><code>${escHtml(sec.code)}</code></pre>
+                      </div>` : ''}
                     ${sec.table ? `
                       <div class="data-table-wrap">
                         <table class="data-table">
@@ -601,6 +642,21 @@
                   ${lab.colabUrl ? `<a class="btn btn-secondary btn-sm" href="${escHtml(lab.colabUrl)}" target="_blank" rel="noopener">↗ ${l === 'uz' ? 'Manba / Repo' : 'External Repo'}</a>` : ''}
                 </div>
 
+                <div class="ref-box" style="margin-top:0.75rem;background:var(--accent-soft);border-color:var(--border-accent);">
+                  <strong>⏱ ${l === 'uz' ? "80-daqiqalik amaliy mashg'ulot ssenariysi:" : "80-Minute Practical Lab Pacing Plan:"}</strong>
+                  <div class="muted" style="font-size:0.84rem;margin-top:0.25rem;">
+                    ${l === 'uz'
+                      ? "0–10' Nazariya takrori & xatolar tahlili · 10–30' 3-qadamli yo'naltirilgan kod (Guided) · 30–60' Talabaning shaxsiy Varianti (#1–#40) · 60–75' Himoya savollari (Viva) & Baholash · 75–80' 4-topshiriq uyga vazifa"
+                      : "0–10' Theory Recap & Pitfalls · 10–30' 3-Step Guided Implementation · 30–60' Individual Student Variant (#1–#40) · 60–75' Oral Defense (Viva Q&A) & Grading · 75–80' Homework & Report Setup"}
+                  </div>
+                </div>
+
+                ${lab.theoryRecap ? `
+                  <div class="lecture-section" style="margin-top:1rem;">
+                    <h2>1. ${l === 'uz' ? "Nazariy asos va API eslatmasi" : "Theory Recap & API Essentials"}</h2>
+                    <div>${lab.theoryRecap[l] || lab.theoryRecap.uz}</div>
+                  </div>` : ''}
+
                 ${(lab.formulas && lab.formulas.length) ? `
                   <div class="ref-box">
                     <strong>${l === 'uz' ? 'Asosiy formulalar va API:' : 'Core Formulas & API:'}</strong>
@@ -608,6 +664,32 @@
                       ${lab.formulas.map((f) => `<code>${escHtml(f)}</code>`).join('')}
                     </div>
                   </div>` : ''}
+
+                ${(lab.pitfalls && (lab.pitfalls[l] || lab.pitfalls.uz)) ? `
+                  <div class="callout warn" style="margin-top:0.9rem;">
+                    <strong>⚠️ ${l === 'uz' ? "Keng tarqalgan xatolar va tekshiruv (Debugging Checklist):" : "Common Bugs & Debugging Checklist:"}</strong>
+                    <ul style="margin:0.4rem 0 0;padding-left:1.2rem;">
+                      ${(lab.pitfalls[l] || lab.pitfalls.uz).map((pt) => `<li>${escHtml(pt)}</li>`).join('')}
+                    </ul>
+                  </div>` : ''}
+
+                ${(lab.guidedSteps && lab.guidedSteps.length) ? `
+                  <section class="lecture-section" style="margin-top:1.15rem;">
+                    <h2>2. ${l === 'uz' ? "Bosqichma-bosqich yo'naltirilgan amaliyot (25–30 min)" : "Step-by-Step Guided Implementation (25–30 min)"}</h2>
+                    ${lab.guidedSteps.map((st, si) => `
+                      <div class="lab-step">
+                        <div class="lab-step-title">${escHtml((st.title && (st.title[l] || st.title.uz)) || `Step ${si + 1}`)}</div>
+                        <p style="margin:0 0 0.6rem;font-size:0.92rem;">${escHtml((st.desc && (st.desc[l] || st.desc.uz)) || '')}</p>
+                        <div class="code-wrap" style="margin:0.5rem 0;">
+                          <div class="code-header">
+                            <span>${lab.code}_step${si + 1}.py</span>
+                            <button type="button" class="btn btn-secondary btn-sm copy-step-btn" data-step="${si}">${t('copyCode')}</button>
+                          </div>
+                          <pre><code>${escHtml(st.code || '')}</code></pre>
+                        </div>
+                        ${st.expected ? `<div style="font-size:0.84rem;color:var(--emerald);margin-top:0.4rem;"><strong>✓ ${l === 'uz' ? 'Kutilgan natija:' : 'Expected Output:'}</strong> ${escHtml(st.expected[l] || st.expected.uz)}</div>` : ''}
+                      </div>`).join('')}
+                  </section>` : ''}
 
                 <div class="callout" style="margin-top:1rem;">
                   <strong>${l === 'uz' ? 'Umumiy barcha talabalar uchun topshiriq:' : 'Common Task (All Students):'}</strong><br>
@@ -679,7 +761,7 @@
                     </div>` : ''}
                 </div>
 
-                <h2 style="margin-top:1.5rem;">${l === 'uz' ? 'Python Starter Kodi' : 'Python Starter Code'}</h2>
+                <h2 style="margin-top:1.5rem;">${l === 'uz' ? 'Yakuniy Starter Shabloni' : 'Complete Starter Template'}</h2>
                 <div class="code-wrap">
                   <div class="code-header">
                     <span>${lab.code}_variant_${variant}.py</span>
@@ -687,6 +769,25 @@
                   </div>
                   <pre><code>${escHtml(lab.pythonCode || lab.code_py || '')}</code></pre>
                 </div>
+
+                ${(lab.vivaQuestions && lab.vivaQuestions.length) ? `
+                  <section class="lecture-section" style="margin-top:1.5rem;">
+                    <h2>4. ${l === 'uz' ? "Himoya Savollari (Viva / Q&A) va Baholash (15 min)" : "Oral Defense (Viva Q&A) & Grading Rubric (15 min)"}</h2>
+                    <div class="callout" style="margin-bottom:0.85rem;">
+                      <strong>📊 ${l === 'uz' ? "Amaliy dars baholash (100%):" : "Lab Grading Breakdown (100%):"}</strong>
+                      ${l === 'uz'
+                        ? "30% Yo'naltirilgan qadamlar · 40% Shaxsiy Variant (#1–#40) to'g'ri kodi & rasmi · 30% Himoya savollariga og'zaki javob"
+                        : "30% Guided Steps · 40% Personalized Variant (#1–#40) execution & outputs · 30% Viva oral defense"}
+                    </div>
+                    ${lab.vivaQuestions.map((vq, vi) => `
+                      <div class="discussion-box" style="margin:0.6rem 0;">
+                        <div style="font-weight:700;">${vi + 1}. ${escHtml(vq.q[l] || vq.q.uz)}</div>
+                        <details style="margin-top:0.35rem;">
+                          <summary style="cursor:pointer;color:var(--accent);font-size:0.86rem;font-weight:600;">${l === 'uz' ? "Namunaviy javobni ko'rish" : "Show model answer"}</summary>
+                          <p style="margin:0.4rem 0 0;font-size:0.9rem;">${escHtml(vq.a[l] || vq.a.uz)}</p>
+                        </details>
+                      </div>`).join('')}
+                  </section>` : ''}
               </article>
 
               <div class="no-print" style="display:flex;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:2rem;">
@@ -720,6 +821,18 @@
           setTimeout(() => { copyBtn.textContent = t('copyCode'); }, 1500);
         });
       }
+
+      root.querySelectorAll('.copy-step-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const si = Number(btn.dataset.step);
+          const step = (lab.guidedSteps || [])[si];
+          if (step && step.code && navigator.clipboard) {
+            navigator.clipboard.writeText(step.code);
+            btn.textContent = t('copied');
+            setTimeout(() => { btn.textContent = t('copyCode'); }, 1500);
+          }
+        });
+      });
 
       const dlBtn = document.getElementById('lab-dl-ipynb');
       if (dlBtn) dlBtn.addEventListener('click', () => downloadLabNotebook(lab, variant));

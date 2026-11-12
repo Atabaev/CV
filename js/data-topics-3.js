@@ -24,26 +24,75 @@ window.CV_TOPICS.push(
     ],
     sections: [
       {
-        heading: { uz: "11.1. Zhang Usuli va Linza Distorsiyasini To'g'irlash", en: "11.1. Zhang's Calibration & Lens Distortion Correction" },
+        heading: { uz: "11.1. Kamera Kalibrlash (Zhang Usuli) va Qayta Proyeksiya Xatosi", en: "11.1. Zhang's Calibration & Reprojection Error" },
         bodyHtml: {
-          uz: "<p><strong>Zhengyou Zhang (2000)</strong> usulida ma'lum o'lchamli <strong>shaxmat taxtasi (chessboard)</strong> 10–20 xil burchakda suratga olinadi, burchaklar subpiksel aniqlikda topilib Levenberg-Marquardt bilan $K$ va distorsiya koeffitsientlari baholanadi. Sifat <strong>qayta proyeksiya xatosi</strong> (reprojection error &lt; 1 px) bilan tekshiriladi.</p><p><strong>Distorsiya:</strong> <em>Radial</em> ($k_1, k_2, k_3$: keng burchakda <strong>bochkasimon / barrel</strong>, teleobyektivda <strong>yostiqsimon / pincushion</strong>) va <em>Tangensial</em> ($p_1, p_2$ — linza va sensor parallel emasligi). Tezkor video to'g'irlash uchun <code>cv2.remap()</code> ishlatiladi.</p>",
-          en: "<p><strong>Zhang's planar method (2000)</strong> photographs a known chessboard from 10–20 viewpoints to solve for $K$ and distortion via Levenberg-Marquardt. Quality is checked via <strong>reprojection error</strong> (&lt; 1 px).</p><p><strong>Distortion:</strong> <em>Radial</em> ($k_1, k_2, k_3$: <strong>barrel</strong> on wide lenses, <strong>pincushion</strong> on telephoto) and <em>Tangential</em> ($p_1, p_2$). Real-time video uses precomputed maps with <code>cv2.remap()</code>.</p>"
+          uz: "<p>Ishlab chiqarishdan chiqqan har bir ob'ektivda fokus masofasi $f_x, f_y$ va optik markaz $(c_x, c_y)$ biroz farq qiladi, linza esa tasvirni egadi. <strong>Zhengyou Zhang (2000)</strong> usuli ma'lum kvadrat o'lchamli <strong>shaxmat taxtasini (chessboard)</strong> 10–20 xil burchakda suratga olib, <code>cv2.findChessboardCorners</code> + subpiksel <code>cornerSubPix</code> bilan burchaklarni topadi va Levenberg–Marquardt bilan $K$, distorsiya va tashqi $[R_i | t_i]$ ni birga optimallashtiradi.</p><p>Kalibrlash sifati <strong>o'rtacha qayta proyeksiya xatosi (reprojection error)</strong> bilan tekshiriladi — u <strong>&lt; 0.5–1.0 piksel</strong> bo'lishi shart!</p>",
+          en: "<p>Every physical lens varies slightly in focal length $(f_x, f_y)$, principal point $(c_x, c_y)$, and optical distortion. <strong>Zhang's method (2000)</strong> captures 10–20 views of a planar chessboard, refines corners via <code>cornerSubPix</code>, and solves jointly for $K$, distortion, and extrinsics $[R_i|t_i]$ via Levenberg–Marquardt.</p><p>Calibration accuracy is verified by RMS <strong>reprojection error</strong>, aiming for <strong>&lt; 0.5–1.0 px</strong>.</p>"
         },
-        latex: "x_{\\text{dist}} = x(1 + k_1 r^2 + k_2 r^4 + k_3 r^6)"
+        latex: "\\min_{K, d, R_i, t_i} \\sum_{i,j} \\left\\| m_{ij} - \\hat{m}(K, d, R_i, t_i, M_j) \\right\\|^2"
       },
       {
-        heading: { uz: "11.2. Stereo Ko'rish, Rektifikatsiya va Chuqurlik (Z = fB/d)", en: "11.2. Stereo Vision, Rectification & Disparity Depth" },
+        heading: { uz: "11.2. Linza Distorsiyasi: Radial (Barrel/Pincushion) & Tangensial", en: "11.2. Lens Distortion: Radial (Barrel/Pincushion) & Tangential" },
         bodyHtml: {
-          uz: "<p>Ikkita kalibrlangan kamera (baza masofasi $B$) bir xil sahnani kuzatganda nuqtaning gorizontal piksel siljishi <strong>disparitet ($d$)</strong> deyiladi. <strong>Rektifikatsiya</strong> epipolyar chiziqlarni gorizontal bir qatorga keltirib, 2D qidiruvni 1D ga soddalashtiradi. Sifatli moslashtirish uchun <em>Block Matching</em> yoki <em>SGM (Semi-Global Matching)</em> qo'llaniladi.</p>",
-          en: "<p>With two calibrated cameras separated by baseline $B$, the horizontal pixel shift of a 3D point is <strong>disparity ($d$)</strong>. <strong>Rectification</strong> aligns epipolar lines horizontally so matching reduces to 1D search via <em>Block Matching</em> or <em>SGM</em>.</p>"
+          uz: "<p>• <strong>Radial distorsiya ($k_1, k_2, k_3$):</strong> Markazdan masofa $r^2 = x^2 + y^2$ ortgani sari kuchayadi. Keng burchakli GoPro/xavfsizlik kameralarida to'g'ri devorlar tashqariga bo'rtib chiqadi (<strong>Bochkasimon / Barrel</strong>, $k_1 &lt; 0$); teleob'ektivlarda esa ichkariga botadi (<strong>Yostiqsimon / Pincushion</strong>, $k_1 &gt; 0$).<br>• <strong>Tangensial distorsiya ($p_1, p_2$):</strong> Linza va CMOS sensor tekisliklari qat'iy parallel emasligidan kelib chiqadi (<em>Brown–Conrady modeli</em>).<br><strong>Tezkor video to'g'irlash:</strong> Har kadrda <code>cv2.undistort()</code> o'rniga bir marta <code>initUndistortRectifyMap()</code> hisoblab, video oqimida tezkor <code>cv2.remap()</code> ishlating!</p>",
+          en: "<p>• <strong>Radial Distortion ($k_1, k_2, k_3$):</strong> Scales with radius $r^2 = x^2 + y^2$ — causing outward <strong>Barrel</strong> ($k_1 &lt; 0$) on wide lenses and inward <strong>Pincushion</strong> ($k_1 &gt; 0$) on telephoto lenses.<br>• <strong>Tangential Distortion ($p_1, p_2$):</strong> Caused by lens-to-sensor tilt (Brown–Conrady model). For real-time video, precompute LUTs via <code>initUndistortRectifyMap()</code> and apply fast <code>cv2.remap()</code>!</p>"
         },
-        latex: "Z = \\frac{f \\cdot B}{d}",
+        latex: "x_{\\text{dist}} = x(1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + 2 p_1 x y + p_2(r^2 + 2 x^2)"
+      },
+      {
+        heading: { uz: "11.3. Stereo Ko'rish, Rektifikatsiya va Chuqurlik (Z = fB/d)", en: "11.3. Stereo Vision, Epipolar Rectification & Depth" },
+        bodyHtml: {
+          uz: "<p>Baza masofasi $B$ bilan ajratilgan ikki kalibrlangan kamera nuqtani chap rasmda $u_L$, o'ngda $u_R$ ga tushiradi. Ular orasidagi siljish <strong>disparitet $d = u_L - u_R$</strong> deyiladi. <strong>Stereo Rektifikatsiya</strong> epipolyar chiziqlarni gorizontal qatorlarga tekislab, 2D qidiruvni bitta gorizontal qatordagi tezkor 1D qidiruvga aylantiradi! Zich xarita uchun <em>Block Matching (StereoBM)</em> yoki silliqroq <em>Semi-Global Matching (SGM)</em> va zamonaviy <em>RAFT-Stereo</em> qo'llaniladi.</p>",
+          en: "<p>Two cameras separated by baseline $B$ observe a horizontal disparity $d = u_L - u_R$. <strong>Stereo Rectification</strong> warps both views so epipolar lines become horizontal scanlines, collapsing 2D search into 1D! Dense disparity uses <em>Block Matching</em>, <em>Semi-Global Matching (SGM)</em>, or deep <em>RAFT-Stereo</em>.</p>"
+        },
+        latex: "Z = \\frac{f \\cdot B}{d}, \\qquad \\Delta Z \\approx \\frac{Z^2}{f \\cdot B}\\, \\Delta d",
         widget: 'stereo-sim'
+      },
+      {
+        heading: { uz: "11.4. Sonli Misol (Doskada): Stereo Chuqurlik va Xato O'sishi ΔZ", en: "11.4. Worked Example: Stereo Depth & Quadratic Depth Error" },
+        bodyHtml: {
+          uz: "<p><strong>Berilgan:</strong> Stereo kamera fokal masofasi $f=1000\\text{ px}$, baza $B=0.10\\text{ m}$ (10 sm), o'lchangan disparitet $d=50\\text{ px}$ (aniqlik $\\Delta d = 1\\text{ px}$).<br>1. Chuqurlik: $Z = \\frac{1000 \\times 0.10}{50} = \\frac{100}{50} = \\mathbf{2.0\\text{ metr}}$.<br>2. Xato tahlili ($Z=2\\text{ m}$ da): $\\Delta Z \\approx \\frac{2^2}{1000 \\times 0.1} \\cdot 1 = \\frac{4}{100} = \\mathbf{0.04\\text{ m} = 4\\text{ sm}}$!<br>3. Endi mashina $Z = \\mathbf{20\\text{ m}}$ uzoqlikda ($d=5\\text{ px}$) bo'lsin: $\\Delta Z \\approx \\frac{20^2}{100} \\cdot 1 = \\mathbf{4.0\\text{ metr}}$ xato! Shu sababli avtonom transportda uzoq masofa uchun baza $B$ kattalashtiriladi yoki LiDAR qo'shiladi!</p>",
+          en: "<p><strong>Given:</strong> $f=1000\\text{ px}$, $B=0.10\\text{ m}$, $d=50\\text{ px}$ with $\\Delta d = 1\\text{ px}$.<br>1. Depth: $Z = (1000 \\times 0.10) / 50 = \\mathbf{2.0\\text{ m}}$.<br>2. Error at $2\\text{ m}$: $\\Delta Z \\approx \\frac{4}{100} = \\mathbf{4\\text{ cm}}$.<br>3. At $20\\text{ m}$ ($d=5\\text{ px}$): $\\Delta Z \\approx \\frac{400}{100} = \\mathbf{4.0\\text{ m}}$! Quadratic error explains why highway autonomy needs wide baselines or LiDAR.</p>"
+        },
+        code: `import cv2, numpy as np
+
+# 1. Undistort LUT bilan tezkor remap misoli
+K = np.array([[800., 0, 160.], [0, 800., 120.], [0, 0, 1.]])
+dist = np.array([-0.35, 0.12, 0.0, 0.0, 0.0])  # Barrel k1 < 0
+map1, map2 = cv2.initUndistortRectifyMap(K, dist, None, K, (320, 240), cv2.CV_16SC2)
+frame = np.zeros((240, 320, 3), np.uint8)
+clean = cv2.remap(frame, map1, map2, cv2.INTER_LINEAR)
+
+# 2. Stereo chuqurlik jadvali
+f, B = 1000.0, 0.12
+for d in [10, 25, 50, 100]:
+    print(f"disparity={d:3d} px -> Z={f*B/d:.2f} m, dZ/dd={((f*B/d)**2)/(f*B):.3f} m/px")`
+      },
+      {
+        heading: { uz: "11.5. Keys-Muhokama: Kalibrlashda Shaxmat Taxtasini To'g'ri Tutish", en: "11.5. Case Discussion: Chessboard Coverage & Stereo SGM Failures" },
+        bodyHtml: {
+          uz: "<p>Kalibrlashda barcha rasmlarni kamera markazida bir xil tekislikda olish katta xato beradi — taxtani <strong>turli burchaklarda og'dirish (30–45°) va kadrning barcha burchaklariga</strong> olib borish shart (radial $k_1, k_2$ aynan chetlarda bilinadi!). Stereo SGM esa tekis oq devor va shisha sirtlarda moslik topolmaydi.</p>",
+          en: "<p>Holding a chessboard flat in the image center fails to constrain $f_x, f_y$ and radial $k_1, k_2$. Tilt 30–45° and cover corners! Stereo matching struggles on textureless walls and transparent/reflective glass.</p>"
+        },
+        discussion: {
+          q: { uz: "Avtomobil bamperidagi stereo kameralar orasidagi baza B=0.10 m dan B=0.40 m ga oshirilsa, uzoq obyektlardagi chuqurlik aniqligi qanday o'zgaradi?", en: "If you widen a car's stereo baseline from B=0.10 m to B=0.40 m, how does far-range depth error ΔZ change?" },
+          a: { uz: "ΔZ ≈ Z² / (f·B) formulaga ko'ra baza 4× oshganda bir xil piksel xatosi Δd uchun metr xatosi ΔZ to'g'ridan-to'g'ri 4 barobar KAMAYADI! (Kamchiligi: juda yaqin obyektlarda ko'rish maydoni ustma-ust tushmay qoladi).", en: "Because ΔZ ≈ Z²/(f·B), widening B by 4× cuts depth error ΔZ by 4× at any distance Z (trade-off: reduced near-field stereo overlap)." }
+        }
       }
     ],
     slides: [
-      { title: { uz: "M11: Kamera Kalibrlash va Stereo Chuqurlik", en: "M11: Camera Calibration & Stereo Vision" }, subtitle: { uz: "KOK1506 · Szeliski Ch. 11–12", en: "KOK1506 · Szeliski Ch. 11–12" }, points: { uz: ["Zhang usuli: shaxmat taxtasi (10–20 tasvir) → K, dist, reprojection error < 1 px", "Radial distorsiya (barrel vs pincushion) & tangensial (p1, p2)", "Stereo rektifikatsiya: 2D qidiruv → 1D gorizontal epipolyar chiziq", "Chuqurlik formulasi: Z = (f · B) / d (disparitetga teskari proporsional)"], en: ["Zhang's method: 10–20 chessboard views → K, distortion, error < 1 px", "Radial (barrel vs pincushion) & tangential distortion (p1, p2)", "Stereo rectification: 2D search → 1D horizontal epipolar scanline", "Depth formula: Z = (f · B) / d (inversely proportional to disparity)"] } },
-      { title: { uz: "Interaktiv Stereo Chuqurlik Simulatori", en: "Interactive Stereo Depth Calculator" }, widget: 'stereo-sim' }
+      { title: { uz: "11.1. Nima Uchun Kamera Kalibrlash Shart?", en: "11.1. Why Calibrate Cameras? (Zhang's Method)" }, points: { uz: ["Real linza ideal pinhole emas: fokus va optik markaz zavoddan siljigan bo'ladi", "Zhang (2000) usuli: ma'lum o'lchamli shaxmat taxtasini 10–20 burchakdan suratga olish", "cv2.findChessboardCorners + cornerSubPix → cv2.calibrateCamera()", "Mezon: Qayta proyeksiya xatosi (Reprojection Error) < 0.5–1.0 piksel!"], en: ["Real lenses deviate from ideal pinholes & warp straight lines", "Zhang's planar method: 10–20 chessboard views at varied tilts & corners", "Solve via cornerSubPix + calibrateCamera(); target RMS error < 1 px"] } },
+      { title: { uz: "Radial & Tangensial Linza Distorsiyasi", en: "Radial (Barrel/Pincushion) & Tangential Distortion" }, latex: "x_{\\text{dist}} = x(1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + 2 p_1 xy + p_2(r^2+2x^2)", points: { uz: ["Bochkasimon (Barrel, k1 < 0): keng burchakli linzalarda chiziqlar tashqariga egiladi", "Yostiqsimon (Pincushion, k1 > 0): teleobyektivda chiziqlar ichkariga tortiladi", "Tangensial (p1, p2): linza va sensor parallel emasligi tufayli", "Real-vaqt video uchun: bir marta LUT hisoblab, cv2.remap() ishlatish!"], en: ["Barrel (k1<0): wide-angle outward bulge; Pincushion (k1>0): telephoto pinch", "Tangential (p1, p2): tilted lens-sensor assembly", "Use initUndistortRectifyMap + cv2.remap() for fast real-time video"] } },
+      { title: { uz: "Stereo Ko'rish va Epipolyar Rektifikatsiya", en: "Stereo Geometry & Epipolar Rectification" }, points: { uz: ["Ikkita kamera B baza masofasi bilan ajratilgan", "Disparitet d = u_L - u_R (yaqin obyekt → katta d; uzoq → kichik d)", "Stereo Rektifikatsiya: epipolyar chiziqlarni gorizontal qatorga tekislash", "2D moslashtirish 1D qator bo'ylab tezkor qidiruvga aylanadi!"], en: ["Two cameras separated by baseline B measure disparity d = u_L - u_R", "Closer objects → larger disparity d", "Rectification aligns scanlines horizontally (2D → 1D search!)"] } },
+      { title: { uz: "Interaktiv Stereo Chuqurlik Simulatori", en: "Interactive Stereo Depth Calculator" }, widget: 'stereo-sim' },
+      { title: { uz: "Chuqurlik Formulasi va Kvadratik Xato ΔZ", en: "Stereo Depth & Quadratic Range Error" }, latex: "Z = \\frac{f \\cdot B}{d}, \\qquad \\Delta Z \\approx \\frac{Z^2}{f \\cdot B}\\,\\Delta d", points: { uz: ["Stereo aniqligi masofa Z ning KVADRATIGA proporsional yomonlashadi!", "Zich disparitet algoritmlari: StereoBM (tez) vs StereoSGM (silliq) vs RAFT-Stereo"], en: ["Depth uncertainty grows quadratically with Z²!", "Dense disparity: fast Block Matching vs Semi-Global Matching (SGM)"] } },
+      { title: { uz: "Sonli Misol (Doskada): Z va ΔZ Xatosi", en: "Worked Example: Stereo Z & Error at 2m vs 20m" }, points: { uz: ["f = 1000 px, B = 0.10 m, xato Δd = 1 px", "1. d = 50 px da: Z = (1000 × 0.10) / 50 = 2.0 m", "2. 2 m da xato: ΔZ ≈ 2² / 100 = 0.04 m (4 sm)", "3. 20 m da (d = 5 px): ΔZ ≈ 20² / 100 = 4.0 metr xato!"], en: ["f=1000px, B=0.10m, Δd=1px", "At d=50px: Z = 2.0m, error ΔZ = 4cm; at 20m (d=5px): ΔZ = 4.0 meters!"] } },
+      { title: { uz: "Python Kod: Tezkor Undistort (remap) & Depth", en: "Python Walkthrough: Fast Undistort Remap & Stereo" }, code: `map1, map2 = cv2.initUndistortRectifyMap(K, dist, None, K, (W, H), cv2.CV_16SC2)
+undistorted = cv2.remap(frame, map1, map2, cv2.INTER_LINEAR)
+sgbm = cv2.StereoSGBM_create(minDisparity=0, numDisparities=64, blockSize=5)
+disp = sgbm.compute(grayL, grayR).astype(np.float32) / 16.0
+depth_m = (f * B) / np.maximum(disp, 1e-3)` },
+      { title: { uz: "Muhokama: Stereo Baza Kengligi va Ko'rlik Zonasi", en: "Discussion: Widening Stereo Baseline vs Blind Spot" }, discussion: { q: { uz: "Avtonom mashinada uzoqdagi xavfni aniq ko'rish uchun baza B ni 4× oshirsak nima yaxshilanadi va nima yomonlashadi?", en: "If you widen a stereo baseline 4× to improve far depth accuracy, what trade-off appears nearby?" }, a: { uz: "Uzoqdagi ΔZ xato 4× kamayadi, ammo maksimal disparitet ko'payib juda yaqin obyektlar chap/o'ng kameralarning umumiy maydonidan chiqib ketadi (minimum masofa ortadi).", en: "Far depth error drops 4×, but minimum measurable distance increases and near disparity range explodes." } } }
     ],
     glossary: [
       { uz: "kalibrlash", en: "camera calibration", defUz: "Shaxmat taxtasi yordamida K va distorsiyani baholash", defEn: "Estimating intrinsics K and lens distortion via chessboard" },
@@ -90,24 +139,74 @@ window.CV_TOPICS.push(
     ],
     sections: [
       {
-        heading: { uz: "12.1. Sirpanuvchi Oyna, Tasvir Piramidasi va NMS", en: "12.1. Sliding Window, Image Pyramids & NMS" },
+        heading: { uz: "12.1. Sirpanuvchi Oyna (Sliding Window), Piramida va NMS", en: "12.1. Sliding Window, Image Pyramids & NMS" },
         bodyHtml: {
-          uz: "<p>Klassik obyekt aniqlashda turli masshtabdagi tasvir piramidasi bo'ylab <strong>sirpanuvchi oyna (sliding window)</strong> yurgiziladi va har bir oyna HOG+SVM bilan baholanadi. Bir obyekt atrofida ko'p oyna chiqmasligi uchun yakunda <strong>Non-Maximum Suppression (NMS)</strong> qo'llaniladi. Qattiq salbiy namunalarni qayta o'qitish <em>Hard Negative Mining</em> deyiladi.</p>",
-          en: "<p>Classical detectors scan a <strong>sliding window</strong> across an <strong>image pyramid</strong> (e.g., HOG+SVM or DPM), then merge overlapping detections via <strong>Non-Maximum Suppression (NMS)</strong>. Training iteratively adds false positives via <em>Hard Negative Mining</em>.</p>"
+          uz: "<p>Tasvir klassifikatsiyasi 'nima bor?' deb so'rasa, obyekt aniqlash 'nima va <strong>qayerda</strong>?' deydi. Klassik usullarda turli o'lchamdagi obyektlarni topish uchun tasvir piramidasi (<code>scaleFactor</code> = 1.1–1.25) bo'ylab <strong>sirpanuvchi oyna</strong> yurgiziladi. Bitta yuz/piyoda ustida o'nlab qo'shni oynalar faollashgani uchun yakunda <strong>Non-Maximum Suppression (NMS)</strong> faqat eng yuqori ishonchli qutini qoldiradi.</p><p>Detektorni kuchaytirish uchun dastlabki model fon ustida xato topgan qiyin namunalarni (<em>False Positives</em>) to'plab qayta o'qitish — <strong>Hard Negative Mining</strong> qo'llaniladi.</p>",
+          en: "<p>Object detection localizes both <em>what</em> and <em>where</em>. Classical detectors scan a <strong>sliding window</strong> over a multi-scale <strong>image pyramid</strong>, suppress duplicate overlapping windows via <strong>Non-Maximum Suppression (NMS)</strong>, and refine accuracy with <strong>Hard Negative Mining</strong>.</p>"
         }
       },
       {
-        heading: { uz: "12.2. Viola-Jones (2001): Integral Tasvir, AdaBoost va Kaskad", en: "12.2. Viola-Jones (2001): Integral Image, AdaBoost & Cascade" },
+        heading: { uz: "12.2. Viola-Jones (2001): Haar, Integral Tasvir O(1), AdaBoost & Kaskad", en: "12.2. Viola-Jones (2001): Haar, O(1) Integral Image & Cascade" },
         bodyHtml: {
-          uz: "<p><strong>Viola-Jones</strong> real vaqtda yuz aniqlashni uchta yangilik bilan mumkin qildi: 1) <strong>Haar-o'xshash xususiyatlar</strong> (yorug'-qorong'i to'rtburchak farqlari); 2) <strong>Integral tasvir</strong> — istalgan o'lchamli to'rtburchak yig'indisini atigi 4 ta amal bilan <strong>$O(1)$ konstant vaqtda</strong> hisoblash; 3) <strong>AdaBoost</strong> bilan eng informativ xususiyatlarni tanlash va <strong>Kaskad</strong> tuzilmasi orqali fon oynalarini dastlabki bosqichlardayoq tez rad etish.</p>",
-          en: "<p><strong>Viola-Jones</strong> enabled real-time face detection via: (1) <strong>Haar-like features</strong>, (2) <strong>Integral Image</strong> computing any rectangle sum in <strong>$O(1)$ constant time</strong> (4 array lookups), and (3) <strong>AdaBoost Cascade</strong> rejecting background windows in early stages.</p>"
+          uz: "<p>Viola va Jones (2001) real vaqtda CPU da 15+ FPS yuz aniqlashni uchta kashfiyot bilan ta'minladi:<br>1) <strong>Haar xususiyatlari:</strong> Ko'z sohasi yonoqdan qorong'iroq, burun ko'prigi yorqinroq kabi oq/qora to'rtburchaklar yig'indi farqi.<br>2) <strong>Integral tasvir $II(y, x)$:</strong> Har bir nuqtagacha bo'lgan piksellar yig'indisini oldindan saqlab, istalgan o'lchamli to'rtburchak yig'indisini atigi <strong>4 ta massiv murojaati — $O(1)$ konstant vaqtda</strong> hisoblash!<br>3) <strong>AdaBoost + Kaskad:</strong> 160,000+ Haar belgisidan eng kuchlilarini tanlab 38-bosqichli kaskad qurish — dastlabki 2–3 belgi 90% fon oynalarini bir necha mikrosekundda rad etadi!</p>",
+          en: "<p><strong>Viola-Jones (2001)</strong> achieved real-time CPU face detection via three pillars: (1) <strong>Haar rectangle features</strong>; (2) <strong>Integral Image</strong> evaluating any rectangle sum in <strong>4 array lookups O(1)</strong>; and (3) an <strong>AdaBoost Cascade</strong> discarding background patches within the first few checks.</p>"
         },
+        latex: "\\text{Sum}(D) = II(4) + II(1) - II(2) - II(3) \\quad \\text{(doim 4 ta amal, } O(1)\\text{!)}",
         widget: 'integral-sim'
+      },
+      {
+        heading: { uz: "12.3. HOG + SVM (Piyoda Aniqlash) va DPM", en: "12.3. HOG + SVM Pedestrians & Deformable Part Models" },
+        bodyHtml: {
+          uz: "<p><strong>HOG (Dalal &amp; Triggs, 2005):</strong> 64×128 oynani 8×8 pikselli kataklarga bo'lib, har katakda 9 ta gradient burchagi (0°–180°) gistogrammasini quradi va 2×2 bloklarda L2 normallaydi → <strong>3780-o'lchamli vektor</strong> + chiziqli <strong>SVM</strong>. Piyoda aniqlashda kiyim rangidan mustaqil siluetni tutadi! Keyinroq <strong>DPM (Felzenszwalb)</strong> obyekt qismlarini (bosh, qo'l, oyoq) prujinali model sifatida modellashtirdi.</p>",
+          en: "<p><strong>HOG (2005):</strong> Pools 9 orientation bins inside 8×8 cells across 2×2 L2-normalized blocks in a 64×128 window (<strong>3,780-D descriptor</strong> + Linear SVM), capturing illumination-invariant silhouettes. <strong>DPM</strong> extended this with spring-connected deformable parts.</p>"
+        }
+      },
+      {
+        heading: { uz: "12.4. Sonli Misol (Doskada): Integral Tasvirdan O(1) To'rtburchak Yig'indisi", en: "12.4. Worked Example: O(1) Integral Image Query & HOG Dims" },
+        bodyHtml: {
+          uz: "<p><strong>Masala 1 (Integral tasvir):</strong> 3×3 tasvir $I = \\begin{bmatrix}1&2&3\\\\4&5&6\\\\7&8&9\\end{bmatrix}$ berilgan.<br>• Integral jadval (1-indeksli 0-qator/ustun bilan): $II = \\begin{bmatrix}0&0&0&0\\\\ 0&1&3&6\\\\ 0&5&12&21\\\\ 0&12&27&45\\end{bmatrix}$.<br>• Pastki o'ng $2\\times 2$ kvadrat $[5,6;\\ 8,9]$ yig'indisini to'g'ridan-to'g'ri tekshirsak: $5+6+8+9 = \\mathbf{28}$.<br>• Integral jadvaldan 4 amalda: $II(3,3) - II(1,3) - II(3,1) + II(1,1) = 45 - 6 - 12 + 1 = \\mathbf{28}$! 1000×1000 tasvirda ham xuddi shunday atigi 4 amal!</p><p><strong>Masala 2 (HOG vektor o'lchami):</strong> 64×128 oynada 8×8 katak = $8 \\times 16$ katak; 2×2 blok qadami 1 katak = $(8-1)\\times(16-1) = 7 \\times 15 = 105$ blok; har blokda $4\\text{ katak} \\times 9\\text{ bin} = 36$ son $\\implies 105 \\times 36 = \\mathbf{3780\\text{ ta belgi}}$!</p>",
+          en: "<p><strong>Integral Image ($I=[[1,2,3],[4,5,6],[7,8,9]]$):</strong> Bottom-right 2×2 sum $= 45 - 6 - 12 + 1 = \\mathbf{28}$ in 4 ops ($5+6+8+9=28$).<br><strong>HOG 64×128:</strong> $7\\times 15 = 105$ overlapping 2×2 blocks × 4 cells × 9 bins $= \\mathbf{3,780}$ features.</p>"
+        },
+        code: `import cv2, numpy as np
+
+I = np.array([[1,2,3],[4,5,6],[7,8,9]], dtype=np.uint8)
+II = cv2.integral(I)  # (H+1, W+1) nol chegarali jadval
+# Pastki o'ng 2x2 [y=1..3, x=1..3]:
+box_sum = II[3, 3] - II[1, 3] - II[3, 1] + II[1, 1]
+print("Direct sum:", I[1:3, 1:3].sum(), "| O(1) Integral:", int(box_sum))
+
+# HOG + Default Pedestrian Detector
+hog = cv2.HOGDescriptor()
+hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+print("HOG vector len:", hog.getDescriptorSize())  # 3780`
+      },
+      {
+        heading: { uz: "12.5. Haar Kaskad Cheklovlari & Chuqur Detektorlarga O'tish", en: "12.5. Haar Limitations & Transition to Deep Detectors" },
+        bodyHtml: {
+          uz: "<p>Haar kaskadlari juda tez bo'lsa-da: (1) yon (profil) yoki qiyshiq burilgan yuzlarda ishlamaydi; (2) niqob yoki quyosh ko'zoynakda (<em>occlusion</em>) keskin sinadi; (3) faqat yuz kabi qattiq shakllarga mos. Shu bois zamonaviy tizimlarda <strong>MTCNN / RetinaFace / YOLOv8-face</strong> ishlatiladi.</p>",
+          en: "<p>While fast on CPU, Haar cascades fail on non-frontal faces, heavy occlusion (masks/sunglasses), and variable lighting—leading modern systems to adopt <strong>RetinaFace / YOLO / DETR</strong>.</p>"
+        },
+        discussion: {
+          q: { uz: "cv2.CascadeClassifier.detectMultiScale() da minNeighbors=1 qilsak nima bo'ladi va minNeighbors=10 qilsak nima bo'ladi?", en: "What happens in cv2.CascadeClassifier.detectMultiScale() if you set minNeighbors=1 vs minNeighbors=10?" },
+          a: { uz: "minNeighbors=1 ko'plab soxta yuzlarni (False Positive — daraxt, stul, devor naqshlarini) chiqarib yuboradi. minNeighbors=10 esa juda qattiq filtr qo'yib soxta aniqlashni yo'qotadi, lekin haqiqiy kichik/qiyshiq yuzlarni ham o'tkazib yuborishi mumkin (Recall pasayadi).", en: "minNeighbors=1 floods the output with false positives (chairs/posters). minNeighbors=10 yields clean detections but drops Recall on angled or faint faces." }
+        }
       }
     ],
     slides: [
-      { title: { uz: "M12: Klassik Obyekt Aniqlash (Viola-Jones & HOG)", en: "M12: Classical Object Detection" }, subtitle: { uz: "KOK1506 · Szeliski Ch. 6.3", en: "KOK1506 · Szeliski Ch. 6.3" }, points: { uz: ["Sirpanuvchi oyna + tasvir piramidasi + NMS", "Viola-Jones 3 ustuni: Haar + Integral Image O(1) + AdaBoost Cascade", "HOG + SVM (piyoda aniqlash) va Deformable Part Model (DPM)", "Cheklovi: faqat frontal yuzlar, burchak/to'silishda sezgir"], en: ["Sliding window + image pyramid + NMS", "Viola-Jones pillars: Haar + Integral Image O(1) + AdaBoost Cascade", "HOG + SVM pedestrians & DPM", "Limitation: frontal pose bias, sensitive to occlusion"] } },
-      { title: { uz: "Interaktiv Integral Tasvir O(1) Hisoblash", en: "Interactive Integral Image O(1) Sum" }, widget: 'integral-sim' }
+      { title: { uz: "12.1. Sirpanuvchi Oyna, Tasvir Piramidasi va NMS", en: "12.1. Sliding Window, Pyramids & NMS" }, points: { uz: ["Turli o'lchamdagi obyektlarni topish: Tasvir piramidasi (scaleFactor=1.1–1.25)", "Sirpanuvchi oyna har bir koordinata va masshtabni tekshiradi", "Muammo: Bitta yuz ustida 10–30 ta qo'shni to'rtburchak chiqadi", "Yechim: Non-Maximum Suppression (NMS) & minNeighbors"], en: ["Multi-scale detection via Image Pyramids + Sliding Window", "Multiple overlapping hits around the same face are pruned by NMS", "Hard Negative Mining retrains on high-scoring false positives"] } },
+      { title: { uz: "Viola-Jones (2001) Uchta Tayanchi", en: "Three Pillars of Viola-Jones (2001)" }, points: { uz: ["1. Haar-o'xshash xususiyatlar (ko'z chizig'i vs yonoq, burun ko'prigi)", "2. Integral tasvir — har qanday o'lchamdagi yig'indini 4 amalda O(1) hisoblash", "3. AdaBoost + 38-bosqichli Kaskad — 90% fonni bir necha mikrosekundda rad etish", "Tarixiy ahamiyati: Birinchi real-vaqt CPU yuz detektori (15+ FPS)"], en: ["1. Rectangular Haar-like intensity contrast features", "2. Integral Image evaluating any box in O(1) constant time", "3. AdaBoost Cascade discarding background windows immediately", "Landmark: First real-time CPU face detector (15+ FPS)"] } },
+      { title: { uz: "Interaktiv Integral Tasvir O(1) Simulatori", en: "Interactive Integral Image O(1) Sum" }, widget: 'integral-sim' },
+      { title: { uz: "Sonli Misol (Doskada): Integral Tasvir & HOG 3780-D", en: "Worked Example: O(1) Integral Sum & HOG Size" }, latex: "\\text{Sum}(D) = II(3,3) - II(1,3) - II(3,1) + II(1,1) = 45 - 6 - 12 + 1 = 28", points: { uz: ["I = [[1,2,3],[4,5,6],[7,8,9]] → pastki o'ng 2×2: 5+6+8+9 = 28", "HOG (64×128 oyna): 7×15 blok × 4 katak × 9 burchak = 3,780 ta belgi!"], en: ["Direct 2×2 sum 5+6+8+9 = 28 matches 45-6-12+1 = 28 in O(1)", "HOG 64×128 window = 7×15 blocks × 4 cells × 9 bins = 3,780 features!"] } },
+      { title: { uz: "AdaBoost va Kaskadning Tezlik Siri", en: "Why the Cascade Runs So Fast" }, points: { uz: ["50,000 oynadan 99.9% i fon — hammasini og'ir modeldan o'tkazish isrof!", "1-bosqich (2 ta Haar xususiyat): 50% fonni birdan rad etadi", "2-bosqich (10 ta xususiyat): qolgan 80% fonni rad etadi", "Faqat yuzga o'xshagan 0.1% oynalar oxirgi chuqur bosqichgacha boradi!"], en: ["99.9% of windows are background — evaluating full classifier everywhere is wasteful", "Stage 1 (2 features) rejects 50% instantly; later stages verify subtle details", "Average checks per window < 10 Haar features!"] } },
+      { title: { uz: "HOG + SVM (2005) va DPM", en: "HOG + SVM (Dalal-Triggs 2005) & DPM" }, points: { uz: ["8×8 pikselli katakda 9 ta gradient burchagi (0°–180°)", "2×2 katakli blokda L2 normalizatsiya → yorug'lik/soya o'zgarishiga chidamli", "Chiziqli SVM bilan piyodalar siluetini aniqlashda 10 yil standart bo'lgan"], en: ["9 orientation bins per 8×8 cell, L2-normalized over overlapping 2×2 blocks", "Illumination-robust pedestrian silhouette detection for a decade"] } },
+      { title: { uz: "Python Kod: Integral Tasvir, Haar Kaskad & HOG", en: "Python Walkthrough: cv2.integral & CascadeClassifier" }, code: `II = cv2.integral(gray)  # O(1) jadval
+face_clf = cv2.CascadeClassifier(
+    cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+faces = face_clf.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+hog = cv2.HOGDescriptor()
+print("HOG Descriptor Dim:", hog.getDescriptorSize())  # 3780` },
+      { title: { uz: "Haar Kaskad Cheklovlari & Zamonaviy Muqobillar", en: "Haar Limitations & Modern Alternatives" }, table: { headers: { uz: ["Mezon", "Haar Cascade (2001)", "YOLO-Face / RetinaFace"], en: ["Criterion", "Haar Cascade", "YOLO-Face / RetinaFace"] }, rows: { uz: [["Profil / Qiyshiq yuz", "Juda zaif", "A'lo (har burchakda)"], ["To'silish (Niqob/Ko'zoynak)", "Tez sinadi", "Barqaror"], ["Resurs / GPU", "Faqat CPU, kichik RAM", "GPU da tezkor, kuchli mAP"]], en: [["Profile / Tilted", "Fails", "Robust across poses"], ["Masks / Occlusion", "Fails", "Handles occlusion cleanly"], ["Hardware", "CPU-only, tiny footprint", "GPU/NPU accelerated, SOTA accuracy"]] } } },
+      { title: { uz: "Muhokama: minNeighbors Parametri Murosasi", en: "Discussion: Tuning minNeighbors Trade-off" }, discussion: { q: { uz: "detectMultiScale() da minNeighbors=1 va minNeighbors=10 qiymatlari Precision/Recall ga qanday ta'sir qiladi?", en: "How does minNeighbors=1 vs minNeighbors=10 affect Precision and Recall?" }, a: { uz: "minNeighbors=1: yuqori Recall, juda past Precision (ko'p soxta qutilar). minNeighbors=10: yuqori Precision, lekin ko'p haqiqiy kichik/qiyshiq yuzlar tashlab ketiladi.", en: "minNeighbors=1 gives high Recall but noisy false positives; minNeighbors=10 raises Precision at the cost of missed faces." } } }
     ],
     glossary: [
       { uz: "integral tasvir", en: "integral image", defUz: "Istalgan to'rtburchak yig'indisini 4 amalda O(1) hisoblovchi jadval", defEn: "Prefix-sum table computing any box sum in 4 ops O(1)" },
@@ -154,25 +253,70 @@ window.CV_TOPICS.push(
     ],
     sections: [
       {
-        heading: { uz: "13.1. Xususiyat Tayyorlash: BoVW, LBP va Normalizatsiya", en: "13.1. Preparing Features: BoVW, LBP & Normalization" },
+        heading: { uz: "13.1. Xususiyat Tayyorlash: BoVW, LBP va Normalizatsiya", en: "13.1. Feature Engineering: BoVW, LBP & Normalization" },
         bodyHtml: {
-          uz: "<p>HOG doimiy uzunlikdagi vektor bersa, SIFT har rasmda turlicha sondagi nuqtalar beradi. Buni doimiy uzunlikka keltirish uchun <strong>Bag of Visual Words (BoVW)</strong> usuli barcha SIFT deskriptorlarini <em>k-means</em> orqali $K$ ta 'vizual so'z'ga klasterlaydi va gistogramma quradi. Tekstura uchun esa 8-qo'shnini markaz bilan solishtiruvchi tezkor <strong>LBP (Local Binary Patterns)</strong> ishlatiladi.</p><p>Datasetni <strong>Train (70–80%)</strong>, <strong>Validation (10–15%)</strong> va <strong>Test (10–15%)</strong> qismlarga stratifikatsiya bilan ajratish shart.</p>",
-          en: "<p>Because SIFT yields variable numbers of keypoints per image, <strong>Bag of Visual Words (BoVW)</strong> clusters descriptors via <em>k-means</em> into $K$ visual words and forms a fixed histogram. <strong>LBP</strong> encodes local texture in 8 bits. Always split datasets into stratified <strong>Train / Validation / Test</strong> sets.</p>"
+          uz: "<p>Klassik ML tasniflovchilari (SVM, k-NN, Random Forest) barcha tasvirlardan <strong>qat'iy bir xil o'lchamli vektor</strong> talab qiladi. HOG/Gistogramma shunday doimiy vektor bersa, SIFT har rasmda turlicha sondagi kalit nuqtalar chiqaradi! Buni yechish uchun <strong>Bag of Visual Words (BoVW)</strong> barcha SIFT deskriptorlarini <em>k-means</em> orqali $K$ ta 'vizual so'z'ga klasterlaydi va har bir rasmdagi chastota gistogrammasini ($\\mathbb{R}^K$) tuzadi (TF-IDF vaznlash bilan yaxshilanadi).</p><p><strong>LBP (Local Binary Patterns):</strong> Markaziy pikselni 8 ta qo'shnisi bilan solishtirib 8-bit tekstura kodi yasaydi — tibbiy to'qima va material nuqsonlarida tezkor!</p>",
+          en: "<p>Classical classifiers require fixed-size feature vectors. Because SIFT yields variable numbers of keypoints per image, <strong>Bag of Visual Words (BoVW)</strong> clusters all descriptors via <em>k-means</em> into $K$ visual words and represents each image as a $K$-bin normalized histogram (optionally TF-IDF weighted). <strong>LBP</strong> compares each center pixel with 8 neighbors for fast texture histograms.</p>"
         }
       },
       {
-        heading: { uz: "13.2. Chalkashlik Matritsasi, Precision, Recall, F1 va ROC-AUC", en: "13.2. Confusion Matrix, Precision, Recall, F1 & ROC-AUC" },
+        heading: { uz: "13.2. Ma'lumotlarni Ajratish (Train/Val/Test) va Data Leakage Xavfi", en: "13.2. Train/Val/Test Splits, k-Fold CV & Data Leakage" },
         bodyHtml: {
-          uz: "<p>Nomutanosib (imbalanced) ma'lumotlarda oddiy <em>Accuracy</em> chalg'ituvchi bo'ladi (95% manfiy bo'lsa, hamma narsani manfiy degan model 95% oladi). Shu sababli <strong>Precision</strong> ($TP/(TP+FP)$), <strong>Recall</strong> ($TP/(TP+FN)$) va <strong>F1-ball</strong> qo'llaniladi. Kuchli nomutanosiblikda <em>Precision-Recall</em> egri chizig'i ROC dan informativroq.</p>",
-          en: "<p>With class imbalance, <em>Accuracy</em> misleads. Use <strong>Precision</strong> ($TP/(TP+FP)$), <strong>Recall</strong> ($TP/(TP+FN)$), and <strong>F1-score</strong>. Under heavy skew, Precision-Recall curves are more informative than ROC.</p>"
+          uz: "<p><strong>Stratifikatsiyalangan ajratish:</strong> 70–80% Train, 10–15% Validation (giperparametrlarni tanlash), 10–15% Test (faqat yakuniy xolis baholash!). Kichik datasetlarda <strong>k-Fold Cross-Validation</strong> ($k=5$ yoki $10$) o'rtacha va standart chetlanishni beradi.</p><p><strong>Data Leakage (Ma'lumot sizib chiqishi) tuzog'i:</strong> Agar <code>StandardScaler</code> yoki <code>PCA</code> ni ajratishdan <em>oldin</em> butun datasetga fit qilsangiz, yoki videodagi ketma-ket kadrlarni aralashtirib Train va Test ga qo'ysangiz, test aniqligi soxta 99% chiqib, real hayotda model sinadi!</p>",
+          en: "<p>Use stratified <strong>Train / Validation / Test</strong> splits (70/15/15) or <strong>k-Fold Cross-Validation</strong> on small sets. <strong>Beware Data Leakage:</strong> never fit scalers/PCA/oversampling before splitting, and never scatter adjacent frames from the same video or patient across Train and Test!</p>"
+        }
+      },
+      {
+        heading: { uz: "13.3. Chalkashlik Matritsasi, Accuracy Tuzog'i, Precision, Recall, F1 & ROC", en: "13.3. Confusion Matrix, Accuracy Trap, Precision/Recall/F1 & ROC-AUC" },
+        bodyHtml: {
+          uz: "<p><strong>Accuracy tuzog'i:</strong> 98% sog'lom va 2% nuqsonli detallar bo'lsa, hamma narsani 'sog'lom' deydigan ahmoqona model 98% Accuracy oladi! Shu bois har bir sinf uchun alohida <strong>Precision</strong> (bashorat ishonchliligi), <strong>Recall</strong> (topib olish to'liqligi), garmonik o'rtacha <strong>F1-score</strong> hamda nomutanosib sinflarda ROC-AUC dan ko'ra sezgirroq bo'lgan <strong>Precision–Recall AUC</strong> qo'llaniladi.</p>",
+          en: "<p>Under heavy class skew, <em>Accuracy</em> misleads. Evaluate <strong>Precision</strong> ($TP/(TP+FP)$), <strong>Recall</strong> ($TP/(TP+FN)$), their harmonic mean <strong>F1-score</strong>, and <strong>PR-AUC / ROC-AUC</strong> across confidence thresholds.</p>"
         },
-        latex: "F_1 = 2 \\cdot \\frac{\\text{Precision} \\cdot \\text{Recall}}{\\text{Precision} + \\text{Recall}}",
+        latex: "\\text{Prec}=\\frac{TP}{TP+FP},\\ \\text{Rec}=\\frac{TP}{TP+FN},\\ F_1=\\frac{2\\cdot\\text{Prec}\\cdot\\text{Rec}}{\\text{Prec}+\\text{Rec}}",
         widget: 'cm-metrics'
+      },
+      {
+        heading: { uz: "13.4. Sonli Hisoblash Misoli (Doskada) va Scikit-Learn Kodi", en: "13.4. Worked Numerical Example & Scikit-Learn Pipeline" },
+        bodyHtml: {
+          uz: "<p><strong>Berilgan chalkashlik matritsasi:</strong> $TP = 40,\\ FP = 10,\\ FN = 5,\\ TN = 45$ (jami $N=100$ tasvir).<br>• $\\text{Accuracy} = (40 + 45)/100 = 85/100 = \\mathbf{0.85\\ (85\\%)}$.<br>• $\\text{Precision} = 40 / (40 + 10) = 40/50 = \\mathbf{0.80\\ (80\\%)}$.<br>• $\\text{Recall} = 40 / (40 + 5) = 40/45 \\approx \\mathbf{0.889\\ (88.9\\%)}$.<br>• $F_1 = 2 \\cdot \\frac{0.80 \\times 0.889}{0.80 + 0.889} = \\frac{1.422}{1.689} \\approx \\mathbf{0.842\\ (84.2\\%)}$.</p>",
+          en: "<p><strong>Given $TP=40, FP=10, FN=5, TN=45$:</strong><br>Accuracy $= 85/100 = \\mathbf{85\\%}$; Precision $= 40/50 = \\mathbf{80\\%}$; Recall $= 40/45 = \\mathbf{88.9\\%}$; $F_1 = 2(0.80)(0.889)/(1.689) = \\mathbf{84.2\\%}$.</p>"
+        },
+        code: `from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import StratifiedKFold
+import numpy as np
+
+# Namuna y_true va y_pred (TP=40, FP=10, FN=5, TN=45)
+y_true = np.array([1]*45 + [0]*55)
+y_pred = np.array([1]*40 + [0]*5 + [1]*10 + [0]*45)
+print("Confusion Matrix:\\n", confusion_matrix(y_true, y_pred))
+print(classification_report(y_true, y_pred, target_names=['Clean', 'Defect'], digits=3))`
+      },
+      {
+        heading: { uz: "13.5. Keys-Muhokama: Tibbiy Tashxis vs Spam Filtr Metrikasi", en: "13.5. Discussion: Prioritizing Recall vs Precision in Real Systems" },
+        bodyHtml: {
+          uz: "<p>Chegaraviy ehtimollik (threshold) tanlovi vazifa narxiga bog'liq: saraton skriningida kasalni o'tkazib yuborish ($FN$) o'limga olib kelishi mumkin → <strong>Recall</strong> ustuvor; avtomatik jarima kameralarida begunoh haydovchiga jarima yozish ($FP$) jiddiy shikoyat keltiradi → <strong>Precision</strong> ustuvor!</p>",
+          en: "<p>Decision threshold tuning depends on error costs: cancer screening minimizes missed positives ($FN \\to$ maximize <strong>Recall</strong>), while automated traffic fines minimize false citations ($FP \\to$ maximize <strong>Precision</strong>).</p>"
+        },
+        discussion: {
+          q: { uz: "Agar sizga 95% Accuracy bergan modelda saraton sinfi uchun Recall=20% chiqsa, bu modelni shifoxonaga qo'yish mumkinmi?", en: "If an AI medical model achieves 95% overall Accuracy but only 20% Recall on cancer cases, is it safe to deploy?" },
+          a: { uz: "Mutlaqo yo'q! Bu model bemorlarning 80% kasalligini aniqlamasdan sog'lom deb chiqarib yuborayapti (juda ko'p FN). Tibbiyotda yuqori Recall + Precision-Recall muvozanati majburiy.", en: "Never! It misses 80% of actual cancer cases (catastrophic FN rate). Clinical triage demands high Recall calibrated against Precision-Recall trade-offs." }
+        }
       }
     ],
     slides: [
-      { title: { uz: "M13: Tasniflash va Baholash Metrikalari", en: "M13: Classification & Evaluation Metrics" }, subtitle: { uz: "KOK1506 · COMP4423 L5–L6", en: "KOK1506 · COMP4423 L5–L6" }, points: { uz: ["BoVW: o'zgaruvchan SIFT → k-means → doimiy uzunlikli gistogramma", "Train / Validation / Test bo'linishi va k-Fold Cross-Validation", "Nomutanosib sinflarda Accuracy tuzog'i", "Precision, Recall, F1-ball va ROC-AUC"], en: ["BoVW: variable SIFT → k-means → fixed-length histogram", "Train / Validation / Test splits & k-Fold CV", "Accuracy paradox on imbalanced datasets", "Precision, Recall, F1 & ROC-AUC"] } },
-      { title: { uz: "Interaktiv Chalkashlik Matritsasi Kalkulyatori", en: "Interactive Confusion Matrix Calculator" }, widget: 'cm-metrics' }
+      { title: { uz: "13.1. Tasvirdan Doimiy Uzunlikdagi Vektor Yasash", en: "13.1. From Raw Features to Fixed-Length Vectors" }, points: { uz: ["SIFT muammosi: A rasmda 320 ta, B rasmda 890 ta nuqta → klassifikatorga sig'maydi!", "BoVW (Bag of Visual Words): Barcha SIFT larni K-means bilan K ta 'vizual so'z'ga klasterlash", "Har tasvir — K o'lchamli vizual so'zlar chastota gistogrammasi", "LBP (Local Binary Patterns): 3×3 markaz vs 8 qo'shni → 256-bin tekstura vektori"], en: ["SIFT emits variable counts per image; SVM/k-NN demand fixed dimensions", "BoVW clusters descriptors via k-means into K visual words → K-bin histogram", "LBP compares 8 neighbors to center pixel for fast 256-bin texture histograms"] } },
+      { title: { uz: "Train / Val / Test Ajratish va Data Leakage Tuzog'i", en: "Train / Val / Test Splits & Data Leakage" }, points: { uz: ["Train (70–80%): model vaznlarini o'qitish", "Validation (10–15%): giperparametrlarni (C, k, lr) tanlash va early stopping", "Test (10–15%): FAQAT oxirgi himoyadan oldin 1 marta ishlatiladi!", "Data Leakage: video kadrlarini aralashtirmang va Scaler/PCA ni faqat Train da fit qiling!"], en: ["Train (70-80%), Validation (tuning), Test (strictly final unbiased check)", "Use Stratified k-Fold CV when data < 2000 samples", "Prevent Data Leakage: fit scalers/PCA on Train only, group by video/patient!"] } },
+      { title: { uz: "Chalkashlik Matritsasi & Metrikalar Formulasi", en: "Confusion Matrix & Core Evaluation Metrics" }, latex: "\\text{Precision}=\\frac{TP}{TP+FP},\\quad \\text{Recall}=\\frac{TP}{TP+FN},\\quad F_1 = \\frac{2\\cdot P\\cdot R}{P+R}", points: { uz: ["TP: to'g'ri topilgan musbat | FP: yolg'on trevoga (Type I)", "FN: o'tkazib yuborilgan (Type II) | TN: to'g'ri manfiy", "Precision — topilganlarning necha foizi rost; Recall — rostlardan necha foizi topildi"], en: ["TP/TN = correct; FP = false alarm; FN = missed target", "Precision = prediction purity; Recall = sensitivity/coverage"] } },
+      { title: { uz: "Interaktiv Chalkashlik Matritsasi Kalkulyatori", en: "Interactive Confusion Matrix Calculator" }, widget: 'cm-metrics' },
+      { title: { uz: "Sonli Misol (Doskada): Precision, Recall va F1", en: "Worked Example: Confusion Matrix Arithmetic" }, points: { uz: ["Berilgan: TP = 40, FP = 10, FN = 5, TN = 45 (N = 100)", "Accuracy = (40 + 45) / 100 = 85.0%", "Precision = 40 / (40 + 10) = 0.800 (80.0%)", "Recall = 40 / (40 + 5) = 40/45 ≈ 0.889 (88.9%)", "F1 = 2 × (0.800 × 0.889) / (0.800 + 0.889) = 0.842 (84.2%)"], en: ["TP=40, FP=10, FN=5, TN=45 → Accuracy = 85%", "Precision = 40/50 = 0.800; Recall = 40/45 ≈ 0.889; F1 ≈ 0.842"] } },
+      { title: { uz: "ROC-AUC vs Precision-Recall AUC", en: "ROC-AUC vs Precision-Recall Curves" }, table: { headers: { uz: ["Mezon", "ROC-AUC (TPR vs FPR)", "PR-AUC (Precision vs Recall)"], en: ["Aspect", "ROC-AUC", "PR-AUC"] }, rows: { uz: [["Nomutanosiblik (1:99)", "Haddan tashqari optimistik ko'rinadi", "Juda sezgir va haqqoniy!"], ["Asosiy fokus", "Barcha thresholdlarda umumiy ajratish", "Kam uchraydigan musbat sinf sifati"], ["Tasodifiy bazaviy daraja", "Doim 0.50", "Musbat sinf ulushiga teng (masalan 0.02)"]], en: [["Heavy Imbalance (1:99)", "Looks overly optimistic", "Honest & sensitive to FPs"], ["Focus", "Overall ranking across thresholds", "Minority positive class quality"], ["Random Baseline", "Always 0.50", "Equals positive prevalence"]] } } },
+      { title: { uz: "Python Kod: StratifiedKFold va Classification Report", en: "Python Walkthrough: Stratified Splits & Metrics" }, code: `from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, stratify=y)
+# StandardScaler faqat X_tr da fit qilinadi!
+print(confusion_matrix(y_true, y_pred))
+print(classification_report(y_true, y_pred, digits=3))` },
+      { title: { uz: "Muhokama: Shifoxona vs Avto-Radar Chegarasi", en: "Discussion: Recall Priority vs Precision Priority" }, discussion: { q: { uz: "Qaysi amaliy tizimda Recall ni maksimal qilish shart va qaysisida Precision ni?", en: "In which real-world CV systems should Recall dominate over Precision, and vice-versa?" }, a: { uz: "Tibbiy saraton/sil skriningi va temir yo'l to'siqlarini aniqlashda Recall (FN juda xavfli). Avtomatik yo'l qoidabuzarlik jarimasi va spam filtrda Precision (FP muammoli).", en: "Cancer screening & obstacle detection prioritize Recall (FN is dangerous); automated traffic tickets prioritize Precision (FP hurts innocent people)." } } }
     ],
     glossary: [
       { uz: "Bag of Visual Words (BoVW)", en: "Bag of Visual Words", defUz: "Lokal deskriptorlarni klasterlab doimiy gistogramma vektor yasash", defEn: "Quantizing local features into visual-word histograms" },
@@ -219,25 +363,66 @@ window.CV_TOPICS.push(
     ],
     sections: [
       {
-        heading: { uz: "14.1. k-NN (k-Eng Yaqin Qo'shni) Algoritmi", en: "14.1. k-Nearest Neighbors (k-NN)" },
+        heading: { uz: "14.1. k-NN (Lazy Learning), Masofalar va O'lchamlilik La'nati", en: "14.1. k-NN (Lazy Learning), Distances & Curse of Dimensionality" },
         bodyHtml: {
-          uz: "<p><strong>k-NN</strong> — <em>dangasa o'qitish (lazy learning)</em> algoritmi: alohida o'qitish bosqichi yo'q, barcha hisoblash bashorat (inference) paytida bo'ladi. Kichik $k$ ($k=1$) shovqinga sezgir (overfitting), katta $k$ chegarani haddan tashqari silliqlaydi (underfitting).</p><p><strong>Cheklovlar:</strong> Xususiyatlar albatta normallashtirilishi kerak va yuqori o'lchamli fazoda masofalar yaqinlashib ketadi (<em>curse of dimensionality</em>).</p>",
-          en: "<p><strong>k-NN</strong> is a <em>lazy learner</em> storing training samples and computing distances at inference. Small $k$ overfits noise; large $k$ underfits boundaries. Always normalize features and beware the <em>curse of dimensionality</em>.</p>"
-        }
+          uz: "<p><strong>k-Nearest Neighbors (k-NN):</strong> O'qitish bosqichida hech qanday parametr optimallashtirmaydi (<em>non-parametric, lazy learning</em>) — barcha hisoblash test nuqtasi kelganda eng yaqin $k$ ta qo'shnini topishda bajariladi ($O(N \\cdot d)$). Kichik $k$ ($k=1$) bitta shovqin nuqta atrofiga orolcha chizib <strong>overfitting</strong> beradi; juda katta $k$ sinf chegaralarini silliqlab <strong>underfitting</strong> qiladi.</p><p><strong>Muhim talablar:</strong> (1) Xususiyatlarni <code>StandardScaler</code> bilan normallashtirish shart; (2) $d &gt; 100$ bo'lganda barcha nuqtalar orasidagi masofa tenglashib ketadi (<strong>Curse of Dimensionality</strong>) → avval PCA qo'llash foydali.</p>",
+          en: "<p><strong>k-NN</strong> is a non-parametric <em>lazy learner</em> storing training samples and voting across the $k$ closest neighbors at inference ($O(Nd)$). Small $k=1$ overfits noise; oversized $k$ underfits boundaries.</p><p>Always standardize features first, and mitigate the high-dimensional <strong>Curse of Dimensionality</strong> via PCA or learned embeddings.</p>"
+        },
+        latex: "d_{L_2}(x, y) = \\sqrt{\\sum_{i=1}^D (x_i - y_i)^2}, \\quad d_{\\cos}(x, y) = 1 - \\frac{x \\cdot y}{\\|x\\|\\|y\\|}"
       },
       {
-        heading: { uz: "14.2. SVM (Support Vector Machines) va Kernel Trick", en: "14.2. Support Vector Machines & Kernel Trick" },
+        heading: { uz: "14.2. SVM (Maksimal Marja, Yumshoq Marja C) & Kernel Trick", en: "14.2. Support Vector Machines (Max Margin, Soft C) & Kernel Trick" },
         bodyHtml: {
-          uz: "<p><strong>SVM</strong> sinflarni ajratuvchi <strong>maksimal marjali (maximum margin)</strong> gipertekislikni $w\\cdot x + b = 0$ topadi — bu qavariq (convex) optimallashtirish bo'lib, lokal minimum muammosi yo'q. <strong>$C$ parametri</strong> yumshoq marja xato jarimasini boshqaradi.</p><p><strong>Kernel Trick:</strong> Chiziqli ajralmaydigan nuqtalarni aniq yuqori fazoga o'tkazmasdan, skalyar ko'paytmani $K(x,y)$ orqali hisoblaydi. Eng kuchlisi — <strong>RBF (Gauss) yadrosi</strong> ($\\gamma$ ta'sir radiusini boshqaradi).</p>",
-          en: "<p><strong>SVM</strong> finds the <strong>maximum-margin</strong> hyperplane $w\\cdot x + b = 0$ (convex optimization, global optimum). Soft-margin <strong>$C$</strong> balances margin width vs misclassification penalty.</p><p>The <strong>Kernel Trick</strong> computes inner products in high/infinite-dimensional spaces implicitly via $K(x,y)$, notably the <strong>RBF kernel</strong> controlled by $\\gamma$.</p>"
+          uz: "<p><strong>SVM (Vapnik &amp; Cortes):</strong> Ikkita sinf orasidan maksimal kenglikdagi ($\\frac{2}{\\|w\\|}$) ajratuvchi gipertekislik $w^\\top x + b = 0$ topadi. Faqat chegaraga eng yaqin nuqtalar — <strong>Tayanch Vektorlar (Support Vectors)</strong> tekislik o'rnini belgilaydi. Qavariq (convex) optimallashtirish bo'lgani uchun global minimum kafolatlanadi!</p><p><strong>Yumshoq marja ($C$) va Kernel Trick:</strong> Katta $C$ xatolarni qattiq jazolaydi (tor marja, overfitting xavfi); kichik $C$ kengroq marjaga ruxsat beradi. Chiziqli ajralmaydigan nuqtalar uchun <strong>Kernel Trick</strong> aniq $\\phi(x)$ fazosiga o'tmasdan skalyar ko'paytmani $K(x,y)$ orqali hisoblaydi (eng mashhuri — <strong>RBF</strong>, $\\gamma$ bilan boshqariladi).</p>",
+          en: "<p><strong>SVM</strong> maximizes the geometric margin $\\frac{2}{\\|w\\|}$ between classes; only boundary <strong>Support Vectors</strong> define the hyperplane (convex optimization = unique global optimum). Soft-margin <strong>$C$</strong> balances margin width vs training errors.</p><p>The <strong>Kernel Trick</strong> computes high-dimensional inner products directly via $K(x,y)$ — notably the <strong>RBF kernel</strong> parameterized by $\\gamma$.</p>"
         },
-        latex: "K_{\\text{RBF}}(x, y) = \\exp\\!\\left(-\\gamma \\|x - y\\|^2\\right)",
+        latex: "\\min_{w,b}\\ \\frac{1}{2}\\|w\\|^2 + C\\sum_i \\xi_i, \\quad K_{\\text{RBF}}(x, y) = \\exp\\!\\left(-\\gamma \\|x - y\\|^2\\right)",
         widget: 'knn-svm'
+      },
+      {
+        heading: { uz: "14.3. Sonli Misol (Doskada): k-NN (k=3) & SVM Marja Kengligi", en: "14.3. Worked Numerical Example: k-NN (k=3) & SVM Margin" },
+        bodyHtml: {
+          uz: "<p><strong>Masala 1 (k-NN, $k=3$):</strong> O'qitish nuqtalari: $A(1,2), B(2,3), E(2,1) \\in \\text{Sinf 1}$; $C(6,7), D(7,8) \\in \\text{Sinf 2}$. Yangi nuqta $Q(2, 2)$ ni tasniflang.<br>• $d(Q,A) = \\sqrt{(2-1)^2+(2-2)^2} = \\mathbf{1.0}$ (Sinf 1)<br>• $d(Q,B) = \\sqrt{0^2+1^2} = \\mathbf{1.0}$ (Sinf 1)<br>• $d(Q,E) = \\sqrt{0^2+1^2} = \\mathbf{1.0}$ (Sinf 1)<br>• $d(Q,C) = \\sqrt{16+25} \\approx \\mathbf{6.4}$ (Sinf 2)<br>Eng yaqin 3 ta qo'shni ($A, B, E$) hammasi 1-sinfdan $\\implies$ $Q$ <strong>Sinf 1</strong>!</p><p><strong>Masala 2 (SVM marja):</strong> Agar $w = [3, 4]^\\top$ bo'lsa, $\\|w\\| = \\sqrt{3^2+4^2} = 5$, demak ajratuvchi yo'lak kengligi $= \\frac{2}{\\|w\\|} = \\frac{2}{5} = \\mathbf{0.40}$.</p>",
+          en: "<p><strong>k-NN ($k=3$):</strong> Train Class 1: $A(1,2), B(2,3), E(2,1)$; Class 2: $C(6,7), D(7,8)$. Query $Q(2,2)$ gives distances $1.0$ to $A, B, E$ (all Class 1) vs $6.4$ to $C \\implies$ predicts <strong>Class 1</strong>.<br><strong>SVM Margin:</strong> With $w=[3,4]^\\top$, $\\|w\\|=5 \\implies \\text{margin} = 2/5 = \\mathbf{0.40}$.</p>"
+        },
+        code: `from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+import numpy as np
+
+X = np.array([[1,2],[2,3],[2,1],[6,7],[7,8]], dtype=float)
+y = np.array([0, 0, 0, 1, 1])
+
+knn = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=3)).fit(X, y)
+svm = make_pipeline(StandardScaler(), SVC(kernel='rbf', C=1.0, gamma='scale')).fit(X, y)
+print("k-NN Q(2,2):", knn.predict([[2,2]])[0], "| SVM Q(2,2):", svm.predict([[2,2]])[0])`
+      },
+      {
+        heading: { uz: "14.4. Ko'p Sinfli Strategiyalar (OvR vs OvO) & Random Forest", en: "14.4. Multi-Class Strategies (OvR / OvO) & Decision Ensembles" },
+        bodyHtml: {
+          uz: "<p>Asl SVM faqat ikkilik (binary) model. $K$ ta sinf uchun: <strong>One-vs-Rest (OvR)</strong> ($K$ ta SVM quradi) yoki <strong>One-vs-One (OvO)</strong> ($K(K-1)/2$ ta SVM — <code>sklearn.SVC</code> standarti). Bundan tashqari, HOG/LBP ustida <strong>Random Forest / XGBoost</strong> ham klassik CV da kuchli raqib bo'lgan.</p>",
+          en: "<p>Extend binary SVM to $K$ classes via <strong>One-vs-Rest ($K$ classifiers)</strong> or <strong>One-vs-One ($K(K-1)/2$ pairwise classifiers)</strong>. Tabular CV features also pair well with Random Forests.</p>"
+        },
+        discussion: {
+          q: { uz: "ImageNet kabi 1,000,000 rasm va 1,000 sinfda nega RBF-SVM dan ko'ra Softmax neyron tarmoq tezroq va afzal?", en: "Why do neural networks with Softmax beat RBF-SVM on 1M-image datasets like ImageNet?" },
+          a: { uz: "RBF-SVM o'qitish vaqti O(N²..N³) ga ko'payadi va xotirada N×N yadro matritsasi (10^12 element!) sig'maydi; mini-batch SGD bilan Softmax esa O(N) chiziqli vaqtda ishlaydi hamda xususiyatlarni birga o'rganadi.", en: "Kernel SVM scales quadratically/cubically O(N²..N³) in samples and cannot store a 1M×1M Gram matrix, whereas mini-batch SGD scales linearly O(N) per epoch while learning features jointly." }
+        }
       }
     ],
     slides: [
-      { title: { uz: "M14: Klassik ML Tasniflovchilari (k-NN & SVM)", en: "M14: k-NN, SVM & Kernel Trick" }, subtitle: { uz: "KOK1506 · COMP4423 L6", en: "KOK1506 · COMP4423 L6" }, points: { uz: ["k-NN: lazy learning, KD-tree, curse of dimensionality", "SVM: maksimal marja, tayanch vektorlar, qavariq optimallashtirish", "Yumshoq marja C parametri (katta C → kichik marja, kam xato)", "Kernel Trick: Linear, Poly, RBF exp(-γ‖x-y‖²)"], en: ["k-NN: lazy learning, KD-tree, curse of dimensionality", "SVM: maximum margin, support vectors, convex optimization", "Soft-margin C trade-off", "Kernel Trick: Linear, Poly & RBF exp(-γ‖x-y‖²)"] } },
-      { title: { uz: "Interaktiv k-NN vs SVM Yordamchi Paneli", en: "Interactive k-NN vs SVM Explorer" }, widget: 'knn-svm' }
+      { title: { uz: "14.1. k-NN: Dangasa O'qitish (Lazy Learning)", en: "14.1. k-Nearest Neighbors (Lazy Learning)" }, points: { uz: ["O'qitish bosqichi = O(1) (faqat ma'lumotni eslab qolish)", "Bashorat bosqichi = O(N·d) (barcha train nuqtalarga masofa hisoblash!)", "k = 1: shovqinga sezgir (Overfitting) | k katta: haddan tashqari silliq (Underfitting)", "Majburiy qoidalar: StandardScaler + yuqori o'lchamda PCA (Curse of Dimensionality)"], en: ["Zero training phase; O(N·d) distance scan at inference time", "k=1 overfits noise; large k underfits boundaries", "Must normalize features & guard against high-dim curse of dimensionality"] } },
+      { title: { uz: "SVM: Maksimal Marja va Tayanch Vektorlar", en: "SVM: Maximum-Margin Hyperplane & Support Vectors" }, latex: "\\min_{w,b} \\frac{1}{2}\\|w\\|^2 + C\\sum_i \\xi_i \\quad \\text{s.t. } y_i(w^\\top x_i + b) \\ge 1 - \\xi_i", points: { uz: ["Marja kengligi = 2 / ‖w‖ — qancha keng bo'lsa, umumlashtirish shuncha yaxshi", "Qavariq (Convex) masala → lokal minimum yo'q!", "Faqat chegara bo'yidagi Tayanch Vektorlar yechimni belgilaydi", "C parametri: katta C → tor marja (overfit xavfi); kichik C → keng marja"], en: ["Margin = 2/‖w‖; convex optimization guarantees global optimum", "Only Support Vectors determine the hyperplane", "Soft-margin C trades margin width for training accuracy"] } },
+      { title: { uz: "Kernel Trick: Chiziqli Ajralmaydigan Ma'lumotlar", en: "The Kernel Trick: Non-Linear Boundaries" }, latex: "K_{\\text{RBF}}(x, y) = \\exp\\!\\left(-\\gamma\\|x - y\\|^2\\right)", points: { uz: ["2D da aylana shaklidagi sinflar to'g'ri chiziq bilan ajralmaydi", "φ(x) yuqori fazoga o'tkazish o'rniga K(x, y) = φ(x)·φ(y) to'g'ridan-to'g'ri hisoblanadi", "RBF (Gauss) yadrosi: γ katta → tor 'orollar' (overfit); γ kichik → silliq chegara"], en: ["Maps non-linear data implicitly without computing explicit φ(x) coordinates", "RBF kernel γ controls neighborhood radius (large γ → tight islands/overfit)"] } },
+      { title: { uz: "Interaktiv k-NN vs SVM Yordamchi Paneli", en: "Interactive k-NN vs SVM Explorer" }, widget: 'knn-svm' },
+      { title: { uz: "Sonli Misol (Doskada): k-NN (k=3) & SVM Marja", en: "Worked Example: k-NN Query & Margin Width" }, points: { uz: ["Sinf 1: A(1,2), B(2,3), E(2,1) | Sinf 2: C(6,7), D(7,8)", "Yangi nuqta Q(2, 2): d(Q,A)=1, d(Q,B)=1, d(Q,E)=1 vs d(Q,C)=6.4", "Eng yaqin 3 ta qo'shni (A, B, E) → Sinf 1!", "SVM: agar w=[3, 4]ᵀ bo'lsa, ‖w‖ = 5 → marja = 2 / 5 = 0.40"], en: ["Class 1: A(1,2), B(2,3), E(2,1); Class 2: C(6,7), D(7,8)", "Query Q(2,2): 3 nearest neighbors (A, B, E at d=1) → Class 1!", "SVM w=[3,4] → margin = 2/‖w‖ = 2/5 = 0.40"] } },
+      { title: { uz: "k-NN vs SVM vs Random Forest Taqqoslanmasi", en: "k-NN vs SVM vs Random Forest Comparison" }, table: { headers: { uz: ["Mezon", "k-NN", "Linear / RBF SVM", "Random Forest"], en: ["Criterion", "k-NN", "SVM (RBF)", "Random Forest"] }, rows: { uz: [["O'qitish vaqti", "O(1) (yo'q)", "O(N²..N³)", "O(N log N · trees)"], ["Bashorat tezligi", "Sekin O(N·d)", "Tez (tayanch vektorlar soni)", "Juda tez"], ["Normallash talabi", "Majburiy!", "Majburiy!", "Shart emas (daraxt)"]], en: [["Training", "None", "O(N²..N³)", "Fast O(N log N)"], ["Inference", "Slow O(Nd)", "Fast (depends on #SV)", "Very fast"], ["Feature Scaling", "Mandatory", "Mandatory", "Scale invariant"]] } } },
+      { title: { uz: "Python Kod: StandardScaler Pipeline + k-NN & SVC", en: "Python Walkthrough: Scaling Pipeline for k-NN & SVM" }, code: `from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+model = make_pipeline(StandardScaler(), SVC(kernel='rbf', C=10, gamma='scale'))
+model.fit(X_train, y_train)` },
+      { title: { uz: "Muhokama: 1 Million Rasmda RBF-SVM vs Deep CNN", en: "Discussion: Scaling Beyond Classical ML" }, discussion: { q: { uz: "ImageNet (1.2M rasm, 1000 sinf) da RBF-SVM nega o'qitib bo'lmaydi?", en: "Why is kernel RBF-SVM impractical on 1.2M-image ImageNet?" }, a: { uz: "Yadro matritsasi 1.2M × 1.2M element = terabaytlab RAM va O(N³) vaqt talab qiladi; mini-batch SGD li neyron tarmoq esa O(N) vaqtda GPU da o'qitiladi.", en: "A 1.2M×1.2M Gram matrix explodes memory/time O(N²..N³), while mini-batch CNNs scale linearly O(N) on GPUs." } } }
     ],
     glossary: [
       { uz: "dangasa o'qitish", en: "lazy learning", defUz: "O'qitishni kechiktirib, barcha hisobni test paytida bajarish (k-NN)", defEn: "Deferring computation until query time (k-NN)" },
@@ -285,27 +470,74 @@ window.CV_TOPICS.push(
     ],
     sections: [
       {
-        heading: { uz: "15.1. Neyron Tarmoqlar, Aktivatsiya va Backpropagation", en: "15.1. Neural Networks, Nonlinearity & Backpropagation" },
+        heading: { uz: "15.1. Neyron Tarmoq, Aktivatsiyalar va MLP Cheklovi Tasvirda", en: "15.1. Artificial Neurons, Activations & Why MLPs Fail on Images" },
         bodyHtml: {
-          uz: "<p>Sun'iy neyron $y = f(\\sum w_i x_i + b)$ amalni bajaradi. Chiziqli bo'lmagan aktivatsiya bo'lmasa, 100 qatlam ham bitta chiziqli transformatsiyaga teng bo'lib qoladi. <strong>Teskari tarqalish (backpropagation)</strong> zanjir qoidasi bilan gradientlarni hisoblaydi va mini-batch <strong>SGD / Adam</strong> vaznlarni yangilaydi.</p><p><strong>Xavier / He initsializatsiyasi</strong> simmetriya muammosini oldini oladi. <strong>End-to-end o'qitish</strong> qo'lda xususiyat yasashni (HOG/SIFT) avtomatik o'rganishga almashtirdi.</p>",
-          en: "<p>Each neuron computes $y = f(\\sum w_i x_i + b)$. Without nonlinear activations, stacked layers collapse to a single linear transform. <strong>Backpropagation</strong> computes gradients via the chain rule for mini-batch <strong>SGD / Adam</strong> updates.</p><p><strong>Xavier/He initialization</strong> breaks symmetry. <strong>End-to-end learning</strong> replaces hand-crafted features with learned visual representations.</p>"
+          uz: "<p>Sun'iy neyron kirishlarning vaznli yig'indisini hisoblab ($z = w^\\top x + b$), nochiziqli aktivatsiyadan o'tkazadi ($a = \\sigma(z)$ yoki $\\text{ReLU}(z) = \\max(0, z)$). <strong>Universal yaqinlashish teoremasi</strong> bitta yashirin qatlamli tarmoq yetarli neyron bilan har qanday uzluksiz funksiyani yaqinlashtira olishini isbotlaydi, lekin amalda chuqur qatlamlar iyerarxik belgilarni kamroq parametrda o'rganadi.</p><p><strong>Nega oddiy MLP 224×224×3 tasvirga yaramaydi?</strong> Tasvirni tekislash ($150,528$ element) 2D qo'shnilikni buzadi va bitta $4096$-neyronli qatlamning o'zida $150,528 \\times 4096 \\approx \\mathbf{616\\text{ million}}$ parametr hosil bo'ladi!</p>",
+          en: "<p>A neuron computes $a = \\phi(w^\\top x + b)$ using nonlinear activations like Sigmoid or ReLU (stacked linear layers without nonlinearity collapse to a single linear matrix!).</p><p><strong>Why plain MLPs fail on raw images:</strong> flattening a 224×224×3 photo destroys 2D spatial proximity and consumes $150,528 \\times 4096 \\approx \\mathbf{616\\text{M weights}}$ in layer 1 alone!</p>"
         },
-        callout: {
-          type: 'info',
-          uz: "<strong>Sonli misol (Forward pass):</strong> $x_1=1, x_2=2,\\ w_1=0.5, w_2=-0.3, b=0.1 \\implies z = 0.5(1) - 0.3(2) + 0.1 = 0.0 \\implies \\sigma(0) = 1/(1+e^0) = 0.50$.",
-          en: "<strong>Worked Example:</strong> $z = 0.5(1) - 0.3(2) + 0.1 = 0.0 \\implies \\sigma(0) = 0.50$."
-        }
+        latex: "y = \\phi\\!\\left(\\sum_{i=1}^n w_i x_i + b\\right), \\quad \\text{ReLU}(z)=\\max(0, z)"
       },
       {
-        heading: { uz: "15.2. Dataset Yig'ish, Annotatsiya va Data Augmentation", en: "15.2. Dataset Curation, Annotation & Data Augmentation" },
+        heading: { uz: "15.2. Backpropagation (Zanjir Qoidasi) & SGD / Adam", en: "15.2. Backpropagation (Chain Rule) & Mini-Batch Optimization" },
         bodyHtml: {
-          uz: "<p><strong>Annotatsiya turlari:</strong> Klassifikatsiya (tasvir yorlig'i), Obyekt aniqlash (bounding box + sinf), Segmentatsiya (piksel maskasi). Ma'lumotlar <strong>Train (70–80%) / Val (10–15%) / Test (10–15%)</strong> ga stratifikatsiya bilan ajratiladi va har epoxada aralashtiriladi (shuffling).</p><p><strong>Data Augmentation:</strong> Tasvirni gorizontal aylantirish (flip), kesish (crop), burish (rotation), rang o'zgartirish (ColorJitter) overfittingni kamaytiradi. Katta to'plamlarda WebDataset/TFRecord disk I/O ni tezlashtiradi.</p>",
-          en: "<p><strong>Annotations:</strong> Image labels (classification), bounding boxes (detection), pixel masks (segmentation). Split stratified into <strong>Train / Val / Test</strong> and shuffle every epoch.</p><p><strong>Data Augmentation</strong> (flips, crops, rotations, color jitter) combats overfitting and class imbalance.</p>"
+          uz: "<p>O'qitish 4 bosqichli tsikl: (1) <strong>Forward pass</strong> — bashorat va Loss $L$ hisoblash; (2) <strong>Backward pass (Backpropagation)</strong> — zanjir qoidasi bilan $\\frac{\\partial L}{\\partial w_i} = \\frac{\\partial L}{\\partial a}\\frac{\\partial a}{\\partial z}\\frac{\\partial z}{\\partial w_i}$; (3) <strong>Optimizer step</strong> — SGD + Momentum yoki adaptiv <strong>Adam</strong>; (4) <code>optimizer.zero_grad()</code>!</p><p>Boshlang'ich vaznlarni nolga tenglash simmetriya tufayli o'qitishni to'xtatib qo'yadi → ReLU uchun <strong>He initialization</strong> ($\\mathcal{N}(0, 2/n_{\\text{in}})$) qo'llaniladi.</p>",
+          en: "<p>Training cycles 4 steps: Forward loss $L$ → Backward chain-rule gradients → Optimizer step (SGD+Momentum / Adam) → <code>zero_grad()</code>. Never zero-init weights (breaks symmetry!); use <strong>He initialization</strong> for ReLU layers.</p>"
+        },
+        latex: "w_{\\text{new}} = w_{\\text{old}} - \\eta\\,\\frac{\\partial L}{\\partial w}"
+      },
+      {
+        heading: { uz: "15.3. Sonli Misol (Doskada): Forward Pass & 1-Qadam Backprop", en: "15.3. Worked Numerical Example: Forward Pass & Gradient Update" },
+        bodyHtml: {
+          uz: "<p><strong>Berilgan:</strong> Kirishlar $x_1 = 1.0,\\ x_2 = 2.0$, vaznlar $w_1 = 0.5,\\ w_2 = -0.3$, siljish $b = 0.1$, haqiqiy nishon $y = 1.0$, $\\eta = 0.5$.<br>1. <strong>Forward:</strong> $z = 0.5(1) + (-0.3)(2) + 0.1 = \\mathbf{0.0}$. Sigmoid: $\\hat{y} = \\sigma(0) = \\frac{1}{1+e^0} = \\mathbf{0.50}$.<br>2. <strong>Kvadratik xato (MSE $\\frac{1}{2}(\\hat{y}-y)^2$):</strong> $L = 0.5(0.5 - 1)^2 = \\mathbf{0.125}$.<br>3. <strong>Gradient ($\sigma'(0) = 0.5(1-0.5) = 0.25$):</strong> $\\frac{\\partial L}{\\partial z} = (\\hat{y}-y)\\sigma'(z) = (-0.5)(0.25) = \\mathbf{-0.125}$.<br>4. <strong>Vazn yangilanishi:</strong> $\\frac{\\partial L}{\\partial w_1} = (-0.125)(1.0) = -0.125 \\implies w_1^{\\text{new}} = 0.5 - 0.5(-0.125) = \\mathbf{0.5625}$ (bashorat 1 ga yaqinlashdi!).</p>",
+          en: "<p><strong>Given:</strong> $x=(1, 2), w=(0.5, -0.3), b=0.1, y=1, \\eta=0.5$.<br>1. Forward: $z = 0.0 \\implies \\hat{y}=\\sigma(0)=\\mathbf{0.50}$, Loss $L=\\frac{1}{2}(0.5-1)^2=\\mathbf{0.125}$.<br>2. Backward: $\\partial L/\\partial z = (-0.5)(0.25) = -0.125$; $\\partial L/\\partial w_1 = -0.125$.<br>3. Update: $w_1^{\\text{new}} = 0.5 - 0.5(-0.125) = \\mathbf{0.5625}$!</p>"
+        },
+        latex: "z=0 \\implies \\hat{y}=0.5,\\quad \\frac{\\partial L}{\\partial w_1} = -0.125 \\implies w_1^{\\text{new}} = 0.5625"
+      },
+      {
+        heading: { uz: "15.4. Dataset Engineering, Annotatsiya Formatlari va Augmentation", en: "15.4. Dataset Engineering, Annotation Formats & Augmentation" },
+        bodyHtml: {
+          uz: "<p>Chuqur o'qitishda sifatli annotatsiya hal qiluvchi: <strong>COCO JSON</strong> (poligon/bbox), <strong>YOLO TXT</strong> (<code>class cx cy w h</code> normallangan 0..1), <strong>Pascal VOC XML</strong>. O'qitishda har epoxada <code>shuffle=True</code> qilinadi (aks holda sinf tartibi gradientni buzadi!). Kam sonli datasetlarda <strong>Data Augmentation</strong> (Albumentations/TorchVision: flip, crop, ColorJitter) overfittingni keskin kamaytiradi.</p>",
+          en: "<p>Standard CV annotation formats: <strong>COCO JSON</strong>, <strong>YOLO TXT</strong> (normalized <code>class cx cy w h</code>), and <strong>VOC XML</strong>. Always enable <code>shuffle=True</code> on training DataLoaders and use <strong>Data Augmentation</strong> to prevent overfitting.</p>"
+        },
+        code: `import torch, torchvision.transforms as T
+
+# PyTorch standard ImageNet preprocessing + Data Augmentation quvuri
+train_tf = T.Compose([
+    T.RandomResizedCrop(224),
+    T.RandomHorizontalFlip(p=0.5),
+    T.ColorJitter(brightness=0.2, contrast=0.2),
+    T.ToTensor(),  # [0..255] HWC -> [0.0..1.0] CHW
+    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+x = torch.randn(4, 3, 224, 224)  # Mini-batch (B, C, H, W)
+print("Batch shape (B,C,H,W):", tuple(x.shape))`
+      },
+      {
+        heading: { uz: "15.5. Muhokama: Annotatsiya Sifati va Augmentatsiya Xatosi", en: "15.5. Discussion: Dangerous Augmentations & Label Noise" },
+        bodyHtml: {
+          uz: "<p><strong>Ehtiyot bo'ling:</strong> Raqamlarni tanishda (MNIST: 6 vs 9) vertikal/180° aylantirish (<code>VerticalFlip</code>) 6 ni 9 ga aylantirib yuboradi! Avtonom haydashda gorizontal ag'darish 'chapga burilish' belgisini 'o'ngga burilish' ga o'zgartirishi mumkin!</p>",
+          en: "<p><strong>Label-Preserving Rule:</strong> Never apply vertical flips to digits (turning 6 into 9), nor horizontal flips to directional road signs (turning 'Left Only' into 'Right Only') without updating the label!</p>"
+        },
+        discussion: {
+          q: { uz: "Yo'l belgilarini (chapga burilish, o'ngga burilish, STOP) tanish datasetida RandomHorizontalFlip qo'llash nima uchun xato?", en: "Why is RandomHorizontalFlip dangerous when training a road-sign classifier?" },
+          a: { uz: "'Chapga burilish' belgisini gorizontal aks ettirsak, tasvir 'O'ngga burilish' bo'lib qoladi, lekin yorliq 'Chapga' ligicha qoladi (label corruption)! Shuning uchun augmentatsiyalar semantik ma'noni saqlashi shart.", en: "Flipping a 'Turn Left' arrow makes it visually identical to 'Turn Right' while keeping the old label, poisoning supervision." }
         }
       }
     ],
     slides: [
-      { title: { uz: "M15: Chuqur O'qitish va Dataset Tayyorlash", en: "M15: Deep Learning & Dataset Engineering" }, subtitle: { uz: "KOK1506 · COMP4423 L7 · D2L", en: "KOK1506 · COMP4423 L7 · D2L" }, points: { uz: ["Neyron modeli y = f(Σwx + b) va nochiziqli aktivatsiya zarurati", "Backpropagation (chain rule) va Mini-batch SGD / Adam", "Nima uchun oddiy FC tarmoqlar 224×224×3 tasvirga samarasiz?", "Dataset: Annotatsiya turlari, Shuffling, Class Imbalance & Augmentation"], en: ["Neuron model & why nonlinearity is essential", "Backpropagation + Mini-batch SGD / Adam", "Why flat Fully-Connected layers fail on 224×224×3 images", "Dataset annotation, shuffling, class imbalance & Data Augmentation"] } }
+      { title: { uz: "15.1. Klassik CV dan Chuqur O'qitishga (End-to-End)", en: "15.1. From Hand-Crafted Features to End-to-End Learning" }, points: { uz: ["Klassik CV: SIFT/HOG qo'lda yasaladi → alohida SVM o'qitiladi", "Deep Learning: Preprocessing + Xususiyat + Klassifikator birga o'qitiladi", "Sun'iy neyron: y = φ(Σ w_i x_i + b)", "Chiziqli bo'lmagan aktivatsiya (ReLU) bo'lmasa 100 qatlam ham 1 qatlamga teng!"], en: ["Classical: manual SIFT/HOG → separate SVM", "Deep Learning: jointly learns hierarchy + classifier end-to-end", "Without nonlinear ReLU/GELU, deep stacks collapse to a single linear matrix"] } },
+      { title: { uz: "Nima Uchun Oddiy FC (MLP) Tasvirlar Uchun Yaramaydi?", en: "Why Plain Fully-Connected MLPs Fail on Images" }, points: { uz: ["224×224×3 tasvirni tekislash → 150,528 kirish (2D qo'shnilik yo'qoladi!)", "1-qatlamda 4096 neyron → 150,528 × 4,096 = 616.5 MILLION parametr!", "Overfitting muammosi va shift/tarjima invariantligi yo'q", "Yechim: Keyingi dars M16 — Konvolyutsion Neyron Tarmoqlar (CNN)!"], en: ["Flattening 224×224×3 breaks 2D local geometry", "Just 1 hidden layer of 4096 neurons requires 616.5 MILLION weights!", "Severe overfitting & zero translation invariance → leads to CNNs (M16)!"] } },
+      { title: { uz: "Backpropagation (Zanjir Qoidasi) & Optimizatorlar", en: "Backpropagation (Chain Rule) & Optimizers" }, latex: "w_{\\text{new}} = w_{\\text{old}} - \\eta\\,\\frac{\\partial L}{\\partial w}, \\quad \\frac{\\partial L}{\\partial w} = \\frac{\\partial L}{\\partial a}\\frac{\\partial a}{\\partial z}\\frac{\\partial z}{\\partial w}", points: { uz: ["Forward pass: bashorat va Yo'qotish (Loss) hisoblash", "Backward pass: zanjir qoidasi bilan barcha gradientlar", "Initsializatsiya: Nolga tenglamang! ReLU uchun He Init; Sigmoid uchun Xavier", "Mini-batch SGD + Momentum vs Adam adaptiv optimizatori"], en: ["Forward → Loss → Chain-rule Backward → Step", "Never zero-init weights; use He Init for ReLU", "Mini-batch SGD+Momentum vs adaptive Adam"] } },
+      { title: { uz: "Sonli Misol (Doskada): 1-Neyron Forward & Backprop", en: "Worked Example: Single Neuron Forward & Backprop" }, points: { uz: ["x=(1, 2), w=(0.5, -0.3), b=0.1, haqiqiy y=1, η=0.5", "1. Forward: z = 0.5(1) - 0.3(2) + 0.1 = 0.0 → ŷ = σ(0) = 0.50", "2. MSE Loss: L = 0.5(0.5 - 1)² = 0.125", "3. Gradient: ∂L/∂z = (0.5 - 1) × 0.25 = -0.125; ∂L/∂w1 = -0.125", "4. Yangilash: w1_new = 0.5 - 0.5(-0.125) = 0.5625 (ŷ endi 1 ga yaqinlashadi!)"], en: ["z=0 → ŷ=σ(0)=0.50, Loss=0.125", "∂L/∂z = (-0.5)(0.25) = -0.125 → w1_new = 0.5 - 0.5(-0.125) = 0.5625"] } },
+      { title: { uz: "Dataset Muhandisligi: Annotatsiya & Shuffling", en: "Dataset Engineering: Annotation Formats & Shuffling" }, table: { headers: { uz: ["Format", "Tuzilishi", "Asosiy sohasi"], en: ["Format", "Structure", "Used By"] }, rows: { uz: [["COCO JSON", "Yagona JSON, bbox [x,y,w,h] + poligonlar", "Faster R-CNN, Mask R-CNN, DETR"], ["YOLO TXT", "Har rasmga .txt: cls cx cy w h ∈ [0,1]", "Ultralytics YOLOv5/v8/v11"], ["Pascal VOC XML", "Har rasmga .xml: xmin, ymin, xmax, ymax", "Klassik detektorlar"]], en: [["COCO JSON", "Single JSON with bbox [x,y,w,h] & polygons", "Detectron2, MMDetection, DETR"], ["YOLO TXT", "Normalized cls cx cy w h per image", "Ultralytics YOLO"], ["Pascal VOC XML", "Absolute xmin, ymin, xmax, ymax XML", "Classic benchmarks"]] } } },
+      { title: { uz: "Data Augmentation va PyTorch Pipeline Kodi", en: "Data Augmentation & PyTorch Transform Pipeline" }, code: `train_tf = T.Compose([
+    T.RandomResizedCrop(224),
+    T.RandomHorizontalFlip(p=0.5),
+    T.ColorJitter(brightness=0.2, contrast=0.2),
+    T.ToTensor(),  # HWC uint8 -> CHW float [0,1]
+    T.Normalize([0.485,0.456,0.406], [0.229,0.224,0.225])
+])` },
+      { title: { uz: "Muhokama: Semantikani Buzuvchi Augmentatsiya", en: "Discussion: When Does Augmentation Corrupt Labels?" }, discussion: { q: { uz: "Yo'l belgilari ('Chapga burilish') va raqamlar ('6 vs 9') datasetida qaysi augmentatsiyalarni taqiqlash kerak?", en: "Which geometric augmentations must be forbidden for 'Turn Left' road signs and digit '6 vs 9' datasets?" }, a: { uz: "Yo'l belgilarida HorizontalFlip ('Chapga'ni 'O'ngga' qiladi!), 6 vs 9 da esa 180° aylanish va VerticalFlip taqiqlanadi!", en: "Forbid HorizontalFlip on directional signs and 180° rotation / VerticalFlip on 6 vs 9 digits because they invert the ground-truth label!" } } }
     ],
     glossary: [
       { uz: "backpropagation", en: "backpropagation", defUz: "Zanjir qoidasi orqali yo'qotish gradientini barcha vaznlarga tarqatish", defEn: "Computing parameter gradients backwards via the chain rule" },

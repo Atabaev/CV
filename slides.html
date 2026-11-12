@@ -491,17 +491,23 @@
         const slides = [];
         const linkedLab = topic.labId ? labs.find((lb) => lb.id === topic.labId) : null;
 
-        // 1. Cover Slide
+        // 1. Cover Slide + 80-Minute Lecture Pacing Roadmap
         slides.push(`
           <section>
-            <div class="slide-pill ${topic.isBonus ? 'bonus' : ''}">${topic.code} · KOK1506 · ${topic.hours} ${l === 'uz' ? 'soat' : 'hrs'}${linkedLab ? ` · ${linkedLab.code}` : ''}</div>
-            <h1 style="font-size:1.8em;line-height:1.2;margin-bottom:0.35em;">${escapeHtml(title)}</h1>
+            <div class="slide-pill ${topic.isBonus ? 'bonus' : ''}">${topic.code} · KOK1506 · ${topic.hours} ${l === 'uz' ? 'soat (80 min)' : 'hrs (80 min)'}${linkedLab ? ` · ${linkedLab.code}` : ''}</div>
+            <h1 style="font-size:1.7em;line-height:1.18;margin-bottom:0.35em;">${escapeHtml(title)}</h1>
             <p class="slide-lead">${escapeHtml(desc)}</p>
+            <div style="margin-top:0.85em;padding:0.55em 0.8em;border-radius:10px;background:rgba(6,182,212,0.09);border:1px solid var(--border-accent);font-size:0.5em;color:var(--text-secondary);">
+              <strong style="color:var(--accent);">⏱ ${l === 'uz' ? "80-daqiqalik ma'ruza rejasi:" : '80-Min Lecture Pacing:'}</strong>
+              ${l === 'uz'
+                ? "0–5' Kirish · 5–32' Nazariya & Matematika · 32–48' Sonli Misol · 48–62' Kod & Widget · 62–72' Keys-tahlil · 72–80' Nazorat"
+                : "0–5' Hook · 5–32' Theory & Math · 32–48' Numerical Example · 48–62' Code & Widget · 62–72' Case Discussion · 72–80' Quiz"}
+            </div>
             ${(topic.keywords && topic.keywords.length) ? `
-              <div style="display:flex;flex-wrap:wrap;gap:0.4em;margin-top:0.85em;">
-                ${topic.keywords.slice(0, 6).map((kw) => `<span style="font-size:0.48em;padding:0.22em 0.65em;border-radius:999px;background:var(--bg-card);border:1px solid var(--border-color);">${escapeHtml(kw)}</span>`).join('')}
+              <div style="display:flex;flex-wrap:wrap;gap:0.4em;margin-top:0.75em;">
+                ${topic.keywords.slice(0, 6).map((kw) => `<span style="font-size:0.46em;padding:0.22em 0.65em;border-radius:999px;background:var(--bg-card);border:1px solid var(--border-color);">${escapeHtml(kw)}</span>`).join('')}
               </div>` : ''}
-            <p style="font-size:0.5em;color:var(--text-muted);margin-top:1.1em;">
+            <p style="font-size:0.48em;color:var(--text-muted);margin-top:0.9em;">
               ${l === 'uz' ? "Navigatsiya: ← / → yoki bo'shliq · Shift+← / → slaydga o'tish · F to'liq ekran" : 'Controls: ← / → or Space · Shift+← / → skip animations · F fullscreen'}
             </p>
           </section>
@@ -521,6 +527,10 @@
           if (s.points) {
             const pts = s.points[l] || s.points.uz || [];
             inner += `<ul>${pts.map((pt) => `<li class="${fragCls}">${escapeHtml(pt)}</li>`).join('')}</ul>`;
+          }
+
+          if (s.code) {
+            inner += `<pre><code class="language-python" data-trim data-noescape>${escapeHtml(s.code)}</code></pre>`;
           }
 
           if (s.table) {
@@ -559,22 +569,24 @@
               <h2>${linkedLab.code}: ${escapeHtml(linkedLab.title[l] || linkedLab.title.uz)}</h2>
               <p style="font-size:0.74em;color:var(--text-secondary);">${escapeHtml(linkedLab.commonTask[l] || linkedLab.commonTask.uz)}</p>
               <pre><code class="language-python" data-trim data-noescape>${escapeHtml(linkedLab.pythonCode || linkedLab.code_py || '')}</code></pre>
-              <p style="font-size:0.55em;margin-top:0.5em;"><a href="labs.html?id=${linkedLab.id}" style="color:var(--accent);">🧪 ${l === 'uz' ? '40 ta talaba varianti va .ipynb generatorni ochish →' : 'Open 40 student variants & .ipynb exporter →'}</a></p>
+              <p style="font-size:0.55em;margin-top:0.5em;"><a href="labs.html?id=${linkedLab.id}" style="color:var(--accent);">🧪 ${l === 'uz' ? '80-daqiqalik amaliy reja, 40 variant va .ipynb generator →' : 'Open 80-min lab plan, 40 variants & .ipynb exporter →'}</a></p>
             </section>
           `);
         }
 
-        // 4. Interactive Quiz Check Slide (1st MCQ from topic)
+        // 4. All Interactive Quiz Check Slides (72-80 min formative wrap-up)
         if (topic.quiz && topic.quiz.length) {
-          slides.push(`
-            <section>
-              <h2>⚡ ${l === 'uz' ? 'Tezkor Nazorat Savoli' : 'Quick Checkpoint Question'}</h2>
-              <div class="slide-exercise-slot" data-topic-id="${topic.id}" data-q-idx="0"></div>
-              <p style="font-size:0.52em;margin-top:0.65em;">
-                <a href="quiz.html#topic-${topic.id}" style="color:var(--accent);">📝 ${l === 'uz' ? "Barcha savollar, moslashtirish va 203-test bankiga o'tish →" : 'Open all topic drills & 203-question test bank →'}</a>
-              </p>
-            </section>
-          `);
+          topic.quiz.forEach((_, qi) => {
+            slides.push(`
+              <section>
+                <h2>⚡ ${l === 'uz' ? `Nazorat Savoli (${qi + 1}/${topic.quiz.length})` : `Checkpoint Question (${qi + 1}/${topic.quiz.length})`}</h2>
+                <div class="slide-exercise-slot" data-topic-id="${topic.id}" data-q-idx="${qi}"></div>
+                <p style="font-size:0.5em;margin-top:0.6em;">
+                  <a href="quiz.html#topic-${topic.id}" style="color:var(--accent);">📝 ${l === 'uz' ? "Moslashtirish, bo'shliqni to'ldirish va 203-test banki →" : 'Open Matching, Fill-Gap & 203-question test bank →'}</a>
+                </p>
+              </section>
+            `);
+          });
         }
 
         return slides.join('\n');

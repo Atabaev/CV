@@ -37,45 +37,68 @@
     return a;
   }
 
+  function normalizeTopicMcq(q, l) {
+    const qText = (q.q && (q.q[l] || q.q.uz)) || '';
+    const expText = (q.explanation && (q.explanation[l] || q.explanation.uz)) || '';
+    let opts = [];
+    if (Array.isArray(q.options)) {
+      opts = q.options.map((o) => (typeof o === 'string' ? o : (o[l] || o.uz || '')));
+    } else if (q.options) {
+      opts = q.options[l] || q.options.uz || [];
+    }
+    let ansIdx = 0;
+    if (typeof q.answer === 'number') {
+      ansIdx = q.answer;
+    } else if (typeof q.answer === 'string') {
+      const letters = ['A', 'B', 'C', 'D'];
+      const found = letters.indexOf(q.answer.toUpperCase());
+      ansIdx = found >= 0 ? found : 0;
+    }
+    return { qText, opts, ansIdx, expText };
+  }
+
+  function getGapValidAnswers(g, l) {
+    if (Array.isArray(g.answer)) return g.answer.map(String);
+    const raw = (g.answer && (g.answer[l] || g.answer.uz)) || String(g.answer || '');
+    return raw.split('/').map((x) => x.trim()).filter(Boolean);
+  }
+
   /* ──────────────────────────────────────────────────────────────────────────
      1. TOPIC MCQ QUIZ WIDGET
      ────────────────────────────────────────────────────────────────────────── */
   function renderQuizWidget(container, topic, quizId) {
     if (!container) return;
-    const lang = getLang();
     const questions = Array.isArray(topic.quiz) ? topic.quiz : [];
     const answers = {};
     let checked = false;
 
     function draw() {
       const l = getLang();
+      const normQs = questions.map((q) => normalizeTopicMcq(q, l));
       let score = 0;
       if (checked) {
-        questions.forEach((q, idx) => {
-          if (answers[idx] === q.answer) score++;
+        normQs.forEach((q, idx) => {
+          if (answers[idx] === q.ansIdx) score++;
         });
       }
 
       container.innerHTML = `
         <div class="quiz-widget">
           <div class="quiz-header" style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
-            <span class="badge badge-accent">${questions.length} ${l === 'uz' ? 'savol' : 'questions'}</span>
-            ${checked ? `<span class="badge ${score === questions.length ? 'badge-success' : 'badge-warn'}">${t('score')}: ${score} / ${questions.length} (${Math.round((score / Math.max(1, questions.length)) * 100)}%)</span>` : ''}
+            <span class="badge badge-accent">${normQs.length} ${l === 'uz' ? 'savol' : 'questions'}</span>
+            ${checked ? `<span class="badge ${score === normQs.length ? 'badge-success' : 'badge-warn'}">${t('score')}: ${score} / ${normQs.length} (${Math.round((score / Math.max(1, normQs.length)) * 100)}%)</span>` : ''}
           </div>
-          ${questions.map((q, qi) => {
-            const qText = (q.q && (q.q[l] || q.q.uz)) || '';
-            const opts = (q.options && (q.options[l] || q.options.uz)) || [];
-            const expText = (q.explanation && (q.explanation[l] || q.explanation.uz)) || '';
+          ${normQs.map((q, qi) => {
             const selected = answers[qi];
             return `
               <div class="quiz-q-card card" style="margin-bottom:1rem;padding:1rem;">
-                <div class="quiz-q-title" style="font-weight:700;margin-bottom:0.75rem;">${qi + 1}. ${escHtml(qText)}</div>
+                <div class="quiz-q-title" style="font-weight:700;margin-bottom:0.75rem;">${qi + 1}. ${escHtml(q.qText)}</div>
                 <div class="quiz-options" style="display:grid;gap:0.45rem;">
-                  ${opts.map((opt, oi) => {
+                  ${q.opts.map((opt, oi) => {
                     let cls = 'quiz-option';
                     if (selected === oi) cls += ' selected';
                     if (checked) {
-                      if (oi === q.answer) cls += ' correct';
+                      if (oi === q.ansIdx) cls += ' correct';
                       else if (selected === oi) cls += ' wrong';
                     }
                     return `
@@ -85,9 +108,9 @@
                       </button>`;
                   }).join('')}
                 </div>
-                ${checked && expText ? `
+                ${checked && q.expText ? `
                   <div class="quiz-explanation" style="margin-top:0.75rem;padding:0.65rem 0.85rem;border-radius:8px;background:var(--bg-subtle);border-left:3px solid var(--accent);font-size:0.9rem;">
-                    <strong>${t('explanation')}:</strong> ${escHtml(expText)}
+                    <strong>${t('explanation')}:</strong> ${escHtml(q.expText)}
                   </div>` : ''}
               </div>`;
           }).join('')}
@@ -112,9 +135,10 @@
       if (checkBtn) {
         checkBtn.addEventListener('click', () => {
           checked = true;
+          const l = getLang();
           let sc = 0;
           questions.forEach((q, idx) => {
-            if (answers[idx] === q.answer) sc++;
+            if (answers[idx] === normalizeTopicMcq(q, l).ansIdx) sc++;
           });
           if (quizId) saveQuizScore(quizId, sc, questions.length);
           draw();
@@ -283,9 +307,8 @@
       let correct = 0;
       if (checked) {
         gaps.forEach((g, i) => {
-          const expected = (g.answer && (g.answer[l] || g.answer.uz)) || '';
-          const alts = expected.split('/').map((x) => normalize(x));
-          if (alts.includes(normalize(inputs[i])) || normalize(inputs[i]) === normalize(expected)) {
+          const alts = getGapValidAnswers(g, l).map((x) => normalize(x));
+          if (alts.includes(normalize(inputs[i]))) {
             correct++;
           }
         });
@@ -298,9 +321,10 @@
           <div style="display:grid;gap:0.75rem;">
             ${gaps.map((g, i) => {
               const rawText = (g.text && (g.text[l] || g.text.uz)) || '';
-              const expected = (g.answer && (g.answer[l] || g.answer.uz)) || '';
-              const alts = expected.split('/').map((x) => normalize(x));
-              const isOk = checked && (alts.includes(normalize(inputs[i])) || normalize(inputs[i]) === normalize(expected));
+              const validList = getGapValidAnswers(g, l);
+              const expected = validList[0] || '';
+              const alts = validList.map((x) => normalize(x));
+              const isOk = checked && alts.includes(normalize(inputs[i]));
               const parts = rawText.split('___');
               const inputHtml = `<input type="text" class="gap-input ${checked ? (isOk ? 'correct' : 'wrong') : ''}" data-gi="${i}" value="${escHtml(inputs[i])}" placeholder="..." ${checked ? 'disabled' : ''} style="min-width:130px;padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-family:var(--font-mono);font-size:0.88rem;">`;
               return `
@@ -359,9 +383,7 @@
 
     function draw() {
       const l = getLang();
-      const qText = (q.q && (q.q[l] || q.q.uz)) || '';
-      const opts = (q.options && (q.options[l] || q.options.uz)) || [];
-      const exp = (q.explanation && (q.explanation[l] || q.explanation.uz)) || '';
+      const { qText, opts, ansIdx, expText: exp } = normalizeTopicMcq(q, l);
 
       container.innerHTML = `
         <div class="slide-ex-box">
@@ -371,7 +393,7 @@
               let cls = 'slide-ex-opt';
               if (selected === oi) cls += ' selected';
               if (checked) {
-                if (oi === q.answer) cls += ' correct';
+                if (oi === ansIdx) cls += ' correct';
                 else if (selected === oi) cls += ' wrong';
               }
               return `<button type="button" class="${cls}" data-oi="${oi}"><strong>${String.fromCharCode(65 + oi)}.</strong> ${escHtml(opt)}</button>`;
@@ -381,7 +403,7 @@
             ${!checked
               ? `<button type="button" class="btn btn-primary btn-sm" data-action="check" ${selected === null ? 'disabled' : ''}>${t('checkAnswers')}</button>`
               : `<button type="button" class="btn btn-outline btn-sm" data-action="retry">${t('tryAgain')}</button>`}
-            ${checked ? `<span class="badge ${selected === q.answer ? 'badge-success' : 'badge-warn'}">${selected === q.answer ? (l === 'uz' ? "To'g'ri!" : 'Correct!') : (l === 'uz' ? "Noto'g'ri" : 'Incorrect')}</span>` : ''}
+            ${checked ? `<span class="badge ${selected === ansIdx ? 'badge-success' : 'badge-warn'}">${selected === ansIdx ? (l === 'uz' ? "To'g'ri!" : 'Correct!') : (l === 'uz' ? "Noto'g'ri" : 'Incorrect')}</span>` : ''}
           </div>
           ${checked && exp ? `<div class="slide-ex-exp">${escHtml(exp)}</div>` : ''}
         </div>`;
@@ -436,12 +458,13 @@
   }
 
   function topicQuestionToUniform(item, topicCode, l) {
+    const n = normalizeTopicMcq(item, l);
     return {
       topic: topicCode,
-      qText: (item.q && (item.q[l] || item.q.uz)) || '',
-      options: (item.options && (item.options[l] || item.options.uz)) || [],
-      answer: item.answer,
-      explanation: (item.explanation && (item.explanation[l] || item.explanation.uz)) || ''
+      qText: n.qText,
+      options: n.opts,
+      answer: n.ansIdx,
+      explanation: n.expText
     };
   }
 
